@@ -1,0 +1,112 @@
+<template>
+  <div class="viewChapter">
+    <Button class="add_button" type="info" plain hairline size="small" @click="saveChapter('release')">Publish</Button>
+    <!-- <Button class="add_button" type="primary" plain hairline size="small" @click="saveChapter('save')">save as draft</Button> -->
+    <!-- <Button class="add_button" type="primary" plain hairline size="small" @click="saveChapter('view')">Preview</Button> -->
+
+    <div class="view_box" v-html="chapter_content">
+      <!-- <div class="content" :style="{height:screenH}" contenteditable="true"> -->
+      <!-- <Field class="input" v-model="chapter_title" center placeholder="Chapter Title"></Field> -->
+      <!-- <Field
+        v-model="chapter_content"
+        type="textarea"
+        :maxlength="maxlength"
+        :minlength="minlength"
+        :autosize="{maxHeight:screenH, minHeight: screenH}"
+        show-word-limit
+        placeholder="Start writing your story"
+      ></Field> -->
+     
+    </div>
+  </div>
+</template>
+
+<script>
+import { Field, Button, Toast } from "vant";
+import axios from "@/lib/axios";
+import { params } from "@/lib/utils/variable";
+import { tokenCheck } from "@/lib/token";
+import { goTo } from '@/lib/utils/native'
+
+export default {
+  name: "viewChapter",
+  components: {
+    Field,
+    Button,
+    Toast,
+  },
+  data() {
+    return {
+      chapter_title: "",
+      screenH: "",
+      isEdit: false,
+      chapter_content: "",
+      maxlength: 3000,
+      minlength: 800,
+      paramObj: {}
+    };
+  },
+  created() {
+    this.paramObj = params;
+    let _this = this;
+    this.$loading.show();
+    tokenCheck().then(data => {
+      axios
+        .get("/v1/writeCenter.chapterInfo?original_chapter_id=" +
+            _this.paramObj.chapter_id
+        ).then(res => {
+          _this.$loading.hide();
+          _this.chapter_title = res.data.chapter_title;
+          _this.chapter_content = res.data.content.modification;
+          document.title = _this.chapter_title
+        });
+    });
+  },
+  mounted() {
+    this.screenH = window.screen.availHeight - 138;
+  },
+  methods: {
+    saveChapter(type){
+      let _this = this;
+      let data = {
+        original_book_id: this.paramObj.book_id,
+        chapter_title: this.chapter_title,
+        content: this.chapter_content,
+        status: '1'
+      }
+      let url = "";
+      // if (this.isEdit) {
+        data.original_chapter_id = this.paramObj.chapter_id
+        url = "/v1/writeCenter.editChapter";
+      // } else {
+      //   url = "/v1/writeCenter.addChapter";
+      // }
+      this.$loading.show();
+      axios.post(url, data).then(res => {
+        if (res.data.code == 200) {
+          Toast({
+            message: "success!",
+            position: "bottom"
+          });
+          _this.$loading.hide();
+          goTo("editNovel.html?type=edit&book_id="+_this.paramObj.book_id)
+        }
+      });
+    }
+  }
+};
+</script>
+
+<style lang="less" scoped>
+.viewChapter {
+  .view_box {
+    width: 100%;
+    overflow-y: auto;
+    padding: 10px;
+  }
+  .add_button {
+    float: right;
+    margin: 10px;
+  }
+}
+</style{{}}>
