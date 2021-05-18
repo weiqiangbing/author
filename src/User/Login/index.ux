@@ -1,0 +1,536 @@
+<template>
+  <div class="login-page">
+    <div class="page-title-wrap">
+      <image class="page-cover" src="{{logo}}" style="object-fit: cover"></image>
+      <text class="page-title">{{componentName}}</text>
+    </div>
+    <!-- 登录信息填写 -->
+    <div class="phone-login" if="{{isOneClickLogin}}">
+      <div class="input-item">
+        <!-- <text class="input-hint">input type="tel"</text> -->
+        <input name="tel" id="tel" class="input-text" value="{{form.tel}}" type="tel" autocomplete="on" placeholder="请输入手机号" onchange="showChangeTel"></input>
+      </div>
+      <div class="input-item get-code-item">
+        <input name="code" id="code" class="input-text" value="{{form.code}}" type="text" placeholder="请输入验证码" onchange="showChangeCode"></input>
+          <!-- maxlength="5" -->
+          <div class="get-code-btn" if="!getCode" onclick="onCodeGetClick">
+          <text>{{getCodeText}}</text>
+          </div>
+          <div class="count-down" else>
+          <text>{{code}}</text>
+          </div>
+      </div>
+      <!-- 按钮 -->
+      <div class="input-item btn-input-item">
+        <!-- <text class="input-hint">input type="button"</text> -->
+        <div class="doc-row">
+          <!-- <input class="input-button input-button-first color-1" type="button" value="确认"
+                  onclick="showClickPrompt('确认')"></input>
+          <input class="input-button color-2" type="button" value="取消" onclick="showClickPrompt('取消')"></input> -->
+          <input class="input-button color-3" type="button" value="{{pageName}}" onclick="onLogin('登录')"></input>
+        </div>
+      </div>
+      <!-- 第三方登录 -->
+      <div class="third-party-login" style="display: none;">
+        <input class="input-button color-1" type="button" value="微信登录" onclick="onWXLogin('微信登录')"></input>
+        <input class="input-button color-2" type="button" value="QQ登录" onclick="onQQLogin('QQ登录')"></input>
+      </div>
+    </div>
+    <!-- 一键登录 -->
+    <div class="one-click-login" else>
+      <div class="doc-row">
+        <input class="input-button color-3" type="button" value="一键登录" onclick="oneClickLogin('一键登录')"></input>
+        </div>
+    </div>
+
+    <!-- 用户协议 -->
+    <div class="user-agree">
+      <text>点击登录代表同意<a href="/user/useragree">《用户协议》</a>和<a href="/user/privacyclause">《隐私条款》</a></text>
+    </div>    
+
+    <div style="display: none;">
+      <web allowthirdpartycookies="true" onpagestart="emitEvt2" id="web2" src="{{$app.$def.h5_user_url}}/member/loginByQuickAppCookie?uc={{cookie.uc}}&_auth_={{cookie._auth_}}&time={{time}}"></web>
+    </div>
+  </div>
+</template>
+
+<script>
+import app from '@system.app'
+import device from '@system.device'
+import prompt from '@system.prompt'
+import account from '@service.account' 
+import qqaccount from '@service.qqaccount'
+import wxaccount from '@service.wxaccount'
+import storage from '@system.storage'
+import router from '@system.router'
+import $ajax from '../../Common/js/ajax.js'
+import { pageEnter, pageLeave } from "../../SDK/TDSDK.min.js"
+// const baseUrl = 'http://hrxsrest.litong.moqing.com'
+
+  export default {
+    private: {
+      pageName: '登录',
+      app: {},
+      form: {
+        tel: null,
+        code: null
+      },
+      logo: require('../../Common/logo.png'),
+      componentName: '',
+      getCode: false,
+      code: 59,
+      getCodeText: '获取验证码',
+      isOneClickLogin: false,
+      cookie: {},
+      time: ''
+
+    },
+    onInit () {
+      let _this = this
+      this.$page.setTitleBar({ text: _this.pageName })
+      // console.log(JSON.stringify(app.getInfo()))
+      // console.log(app.getInfo())
+      this.app = app.getInfo()
+      this.componentName = this.app.name
+      // this.$page.setTitleBar({text: 'Input'})       
+    },    
+    onShow() {
+      let _this = this
+      pageEnter(_this.pageName);
+      storage.get({
+        key: 'token',
+        success: function(data){
+          if(data == ''){
+            _this.isOneClickLogin = false
+          }else{
+            _this.isOneClickLogin = true
+          }
+        },
+        fail: function(data, code) {
+          // console.log(`handling fail, data = ${data}`)
+          // console.log(`handling fail, code = ${code}`)
+        }
+      })
+    },
+    onHide() {
+      let _this = this
+      pageLeave(_this.pageName);
+    },
+    // 判断是否为手机号
+    isPoneAvailable (pone) {
+      var myreg = /^[1][3,4,5,7,8][0-9]{9}$/;
+      if (!myreg.test(pone)) {
+        return false;
+      } else {
+        return true;
+      }
+    },
+    onCodeGetClick(){
+      // console.log('获取验证码')
+      // console.log('form', this.form.tel)
+      let _this = this
+      let interval = null
+      let isTel = _this.isPoneAvailable(_this.form.tel)
+      // console.log('isTel', isTel)
+      if(isTel){
+        _this.getCode = true
+        interval = setInterval(()=>{
+          if(_this.code > 1){
+            _this.code = _this.code - 1
+          }else{
+            _this.getCode = false
+            clearInterval(interval);
+            interval = null;
+            _this.getCodeText = '重新获取验证码'
+            _this.code = 59
+          }
+        }, 1000)
+        let params = {
+          mobile: _this.form.tel
+        }
+        $ajax.post('/v1/sms.send', params).then(res=>{
+          // console.log('sms.send', res)
+          if(res.code == 200){
+            prompt.showToast({
+              message: '验证码发送成功'
+            })
+          }else{
+            prompt.showToast({
+              message: res.desc
+            })
+          }
+        })
+      }else{
+        prompt.showToast({
+          message: '请输入正确的手机号'
+        })
+      }
+      
+    },
+    showChangeTel (e) {
+      // console.log('e', e)
+      let _this = this
+      // let tel = this.$element('tel').attr.name
+      // let code = this.$element('code').attr.name
+      this.form.tel = e.value     
+    },
+    showChangeCode (e) {
+      let _this = this      
+      this.form.code = e.value
+    },
+    onLogin (msg) {
+      let _this = this
+      let params = {
+        mobile: _this.form.tel,
+        smscode: _this.form.code
+      }
+      $ajax.post('/v1/user.bindmobile', params).then(res=>{
+        // console.log('bindmobile', res)
+        if(res.code == 200){
+          prompt.showToast({
+            message: '手机号绑定成功'
+          })
+          router.back()
+        }else{
+          prompt.showToast({
+            message: res.desc
+          })
+        }
+      })
+      // prompt.showToast({
+      //   message: msg
+      // })
+    },
+    oneClickLogin(){
+      let _this = this
+      device.getUserId({
+        success: function(data) {   
+          storage.set({
+            key: 'quick_user_id',
+            value: data.userId
+          })
+          let params = {
+            quick_user_id: data.userId
+          }
+          _this.automaticLogin(params)
+        },
+        fail: function(data, code) {
+          console.log(`handling fail, code = ${code}`)
+        }
+      })
+    },
+    automaticLogin(params) {
+      let _this = this
+      $ajax.post('/v1/quickapp.user.login', params).then(res=>{
+        _this.cookie = {
+          uc: encodeURIComponent(res.cookie.uc),
+          _auth_: encodeURIComponent(res.cookie._auth_)
+        }
+        _this.time = Math.random()
+        storage.set({
+          key: 'token',
+          value: res.token
+        })
+        storage.set({
+          key: 'cookie',
+          value: res.cookie
+        })
+        storage.set({
+          key: 'user',
+          value: res.user
+        })
+        setTimeout(()=>{
+          router.back()
+        }, 1000)
+      })
+    },  
+    onQQLogin (msg) {
+      console.log(this.form)
+      var type = qqaccount.getType();
+      console.log('type', type)
+      if (type == 'APP') {
+        qqaccount.authorize({
+          scope: 'get_user_info',
+          success: function(data) {
+              console.log("qqaccount authorize success, data:" + JSON.stringify(data));
+          },
+          fail: function(data, code) {
+              console.log("qqaccount authorize fail, data:" + data + ", code:" + code);
+          },
+          cancel: function() {
+              console.log("qqaccount authorize cancelled.");
+          }
+        });
+      } else if (type == 'WEB') {
+        qqaccount.authorize({
+          state: 'random2234',
+          scope: 'get_user_info',
+          redirectUri: 'https://your.redirect.url/path',
+          success: function(data) {
+              console.log("qqaccount authorize success, data:" + JSON.stringify(data));
+          },
+          fail: function(data, code) {
+              console.log("qqaccount authorize fail, data:" + data + ", code:" + code);
+          },
+          cancel: function() {
+              console.log("qqaccount authorize cancelled.");
+          }
+        });
+      } else {
+        prompt.showToast({
+          message: '当前无可用的QQ登陆方式'
+        })
+        console.log("qqaccount not available.");
+      }
+      
+    },
+    onWXLogin (msg) {
+      console.log(this.form)
+      var type = wxaccount.getType();
+      console.log('type', type)
+      if (type == 'APP') {
+        wxaccount.authorize({
+          scope: 'snsapi_userinfo',
+          state: 'randomString',
+          success: function(data) {
+            console.log("wxaccount authorize success:" + JSON.stringify(data));
+          },
+          fail: function(data, code) {
+            console.log("wxaccount authorize fail:" + data + ", code:" + code);
+          },
+          cancel: function() {
+            console.log("wxaccount authorize cancelled.");
+          }
+        });
+      } else {
+        prompt.showToast({
+          message: '当前微信登录不可用，微信未安装或者手机系统不支持!'
+        })
+        console.log("wxaccount not available.");
+      }
+    },
+    emitEvt2(url, e){
+      console.log('login_emitEvt2', url)
+    }
+    
+  }
+</script>
+
+<style lang="less">
+@import '../../common/css/common.css';
+.login-page{
+  flex: 1;
+  flex-direction: column;
+  .phone-login{
+    display: flex;
+    flex-direction: column;
+      .input-item {
+        /* margin-bottom: 10px; */
+        flex-direction: column;
+      }
+      .get-code-item{
+        display: flex;
+        position: relative;
+        .input-text{
+          padding-right: 200px;
+        }
+        .get-code-btn{
+          position: absolute;
+          right: 100px;
+          top: 15px;
+          height: 60px;
+          line-height: 60px;
+          padding-top: 0;
+          padding-bottom: 0;
+          padding-left: 30px;
+          border-left-color: #D7D3D3;
+          border-left-width: 1px;
+          background-color: #ffffff;
+          text{
+            color: #44BBFF;
+          }
+        }
+        .count-down{
+          position: absolute;
+          right: 100px;
+          top: 15px;
+          height: 60px;
+          line-height: 60px;
+          padding-top: 0;
+          padding-bottom: 0;
+          padding-left: 30px;
+          border-left-color: #D7D3D3;
+          border-left-width: 1px;
+          background-color: #ffffff;
+          text{
+            color: #44BBFF;
+          }
+        }
+
+      }
+      
+      .input-hint {
+        margin-left: 30px;
+        margin-bottom: 30px;
+        margin-right: 30px;
+      }
+      .doc-row {
+        justify-content: center;
+        margin-left: 30px;
+        margin-right: 30px;
+      }
+      .flex-grow {
+        flex-grow: 1;
+      }
+      .input-text {
+        height: 90px;
+        line-height: 90px;
+        /* padding-left: 30px;
+        padding-right: 30px; */
+        margin-left: 100px;
+        margin-right: 100px;
+        /* border-top-width: 1px; */
+        border-bottom-width: 1px;
+        border-color: #D7D3D3;
+        font-size: 32px;
+        background-color: #ffffff;
+      }
+      .input-text:focus {
+        border-color: #44BBFF;
+      }
+
+      .btn-input-item{
+        margin-top: 50px;
+      }
+      .input-button {
+        flex: 1;
+        padding-top: 25px;
+        padding-bottom: 25px;
+        padding-right: 30px;
+        padding-left: 50px;
+        margin-left: 70px;
+        margin-right: 70px;
+        font-size: 36px;
+        color: #ffffff;
+        border-radius: 10px;
+        margin-bottom: 30px;
+      }
+      .input-button-first {
+        margin-left: 0px;
+      }
+      .third-party-login{
+        display: flex;
+        flex-direction: column;
+        margin-left: 30px;
+        margin-right: 30px;
+      }
+      .color-1 {
+        background-color: #09ba07;
+      }
+      .color-1:active {
+        background-color: #098807;
+      }
+      .color-2 {
+        background-color: #f76160;
+      }
+      .color-2:active {
+        background-color: #c55756;
+      }
+      .color-3 {
+        background-color: #0faeff;
+      }
+      .color-3:active {
+        background-color: #44BBFF;
+      }
+  }
+
+  .one-click-login{
+    display: flex;
+    flex-direction: column;
+    .input-item {
+      /* margin-bottom: 10px; */
+      flex-direction: column;
+    }
+    .doc-row {
+      justify-content: center;
+      margin-left: 30px;
+      margin-right: 30px;
+    }
+    .flex-grow {
+      flex-grow: 1;
+    }
+    .input-text {
+      height: 90px;
+      line-height: 90px;
+      /* padding-left: 30px;
+      padding-right: 30px; */
+      margin-left: 100px;
+      margin-right: 100px;
+      /* border-top-width: 1px; */
+      border-bottom-width: 1px;
+      border-color: #D7D3D3;
+      font-size: 32px;
+      background-color: #ffffff;
+    }
+    .input-text:focus {
+      border-color: #44BBFF;
+    }
+    .btn-input-item{
+      margin-top: 50px;
+    }
+    .input-button {
+      flex: 1;
+      padding-top: 25px;
+      padding-bottom: 25px;
+      padding-right: 30px;
+      padding-left: 50px;
+      margin-left: 70px;
+      margin-right: 70px;
+      font-size: 36px;
+      color: #ffffff;
+      border-radius: 10px;
+      margin-bottom: 30px;
+    }
+    .input-button-first {
+      margin-left: 0px;
+    }
+    .third-party-login{
+      display: flex;
+      flex-direction: column;
+      margin-left: 30px;
+      margin-right: 30px;
+    }
+    .color-1 {
+      background-color: #09ba07;
+    }
+    .color-1:active {
+      background-color: #098807;
+    }
+    .color-2 {
+      background-color: #f76160;
+    }
+    .color-2:active {
+      background-color: #c55756;
+    }
+    .color-3 {
+      background-color: #0faeff;
+    }
+    .color-3:active {
+      background-color: #44BBFF;
+    }
+  }
+  .user-agree{
+    position: fixed;
+    bottom: 0;
+    text{
+      width: 100%;
+      height: 100px;
+      line-height: 100px;
+      text-align: center;
+      a{
+        color: #0faeff;
+      }
+    }
+  }
+}
+</style>

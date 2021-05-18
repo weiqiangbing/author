@@ -1,0 +1,208 @@
+<template>
+  <div class="chapter-box">
+    <div class="head1">
+      <text class="left">共{{ num }}章节</text>
+      <image onclick="sortclick" show="{{ sort }}" class="right" src="../../Common/images/zhengxu.png"></image>
+      <image onclick="sortclick" show="{{ !sort }}" class="right" src="../../Common/images/daoxu.png"></image>
+    </div>
+    <div class="content">
+      <list>
+        <!-- 当前显示章节:红色
+        已读章节:黑色
+        未读章节:灰色 -->
+        <block for="{{item in list}}">
+          <list-item class="chapter-item" type="chapter-item" onclick="clickItem(item)">
+          <!-- <text if="{{readhistory.length > 0 && readhistory.indexOf(item.id) > -1 && item.id == $app.$def.currChapterId}}" class='type3'>{{ item.title }}</text>
+          <text elif="{{readhistory.length > 0 && readhistory.indexOf(item.id) > -1 }}" class='type2'>{{ item.title }}</text> -->
+          <text class="{{readChapter.key == item.id ? 'type1': 'type2'}}">{{ item.title }}</text>
+          <!-- TODO:不支持三元表达式 -->
+          <!-- <text class="{{readhistory.length > 0 && readhistory.indexOf(item.id) > -1 ? 'type2' : item.id == $app.$def.currChapterId ? 'type3': 'type1'}}">{{ item.name }}</text> -->
+        </list-item>
+        </block>
+      </list>
+
+        <!-- 当前显示章节:红色
+          已读章节:黑色
+          未读章节:灰色 -->
+        <!-- <list>
+          <list-item onclick="clickItem(item)" class="chapter-item" type="chapter-item" for="{{item in list}}">
+        <text if="{{readhistory.length > 0 && readhistory.indexOf(item.id) > -1 && item.id == $app.$def.currChapterId}}" class='type3'>{{ item.name }}</text>
+        <text elif="{{readhistory.length > 0 && readhistory.indexOf(item.id) > -1 }}" class='type2'>{{ item.name }}</text>
+        <text else class='type1'>{{ item.name }}</text>
+          </list-item>
+        </list> -->
+    </div>
+    <div class="bottom">
+      <text class="{{start_code == 1?'disable':'btn'}}" onclick="lastpage">上一页</text>
+      <stack class="stack">
+        <!-- <text>{{ pagelist[pagenum] }}</text> -->
+        <text>{{ start_code }}/{{ end_code }}</text>
+        <picker class="picker" type="text" range="{{pagelist}}" onchange="change"></picker>
+      </stack> 
+      <text class="{{end_code >= num?'disable':'btn'}}" onclick="nextpage">下一页</text>
+    </div>
+  </div>
+</template>
+
+<script>
+import storage from '@system.storage'
+const router = require('@system.router')
+
+export default {
+  props: ['list','num','sort','pagelist','pagenum','bookid','readhistory','offset','limit','start_code','end_code'],
+  data: {
+    obj: {},
+    readChapter: {}
+  },
+  onInit() {
+    let _this = this
+  },
+  onShow() {
+    let _this = this
+    console.log('list', this.bookid)
+    storage.get({
+      key: 'chapter_list_reading',
+      success: function(data){
+        console.log('data', data)
+        console.log(JSON.parse(data))
+        _this.obj = JSON.parse(data)
+        _this.readChapter = JSON.parse(data)
+      }
+    })
+  },
+  sortclick(){
+    this.$emit('sortchange')
+  },
+  change(e){
+    this.$emit('pickerchange', {value: e.newSelected})
+  },
+  clickItem(item){
+    let _this = this
+    console.log('item', item.id)
+    let key = 'key_' + item.id
+    console.log('key', key)
+    this.obj = JSON.stringify({key: JSON.parse(item.id)})
+    console.log('obj', this.obj)
+    // this.setStorageData('chapter_list_reading', _this.obj)
+    storage.set({
+      key: 'chapter_list_reading',
+      value: _this.obj,
+      success: function(data) {
+        console.log('handling success')
+      },
+      fail: function(data, code) {
+        console.log(`handling fail, code = ${code}`)
+      }
+    })
+    router.push({
+      uri: '/book/reader',
+      params: {
+        book_id: _this.bookid,
+        chapter_id: item.id
+      }
+    })
+    // this.$app.$def.goRead({
+    //   bookId: this.bookid,
+    //   id: item.book_souce_id,
+    //   chapters: item.id
+    // })
+    // this.$app.$def.currChapterId = item.id
+
+  },
+  async setStorageData(key, data){
+    return await new Promise((resolve) => {
+        storage.set({
+            key: key,
+            value: JSON.stringify(data),
+            success: function(data){
+                resolve(data)
+            }
+        })
+    })
+  },
+  lastpage(){
+    if(this.start_code == 1){
+      return;
+    }
+    this.$emit('lastpage');
+  },
+  nextpage(){
+    if(this.end_code >= this.num){
+      return;
+    }
+    this.$emit('nextpage');
+  }
+}
+</script>
+
+<style lang="less">
+.chapter-box {
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+  .head1 {
+    border-bottom: 1px solid #F1F1F1;
+    width: 100%;
+    height: 110px;
+    justify-content: space-between;
+    align-items: center;
+    .left {
+      font-size: 28px;
+      color: #989898;
+      margin-left: 32px;
+    }
+    .right{
+      width: 40px;
+      margin-right: 32px;
+    }
+  }
+  .content {
+    width: 100%;
+    flex: 1;
+    .chapter-item{
+      height: 110px;
+      text{
+        margin-left: 32px;
+        flex: 1;
+        border-bottom: 1px solid #F1F1F1;
+      }
+      .type1{
+        color: #B9B9B9;
+      }
+      .type2{
+        color:#4e4e4e;
+      }
+      .type3{
+         color: #EB3F30;
+      }
+    }
+  }
+  .bottom {
+    width: 100%;
+    height: 100px;
+    justify-content: space-around;
+    border-top: 1px solid #F1F1F1;
+    .btn{
+      color: #EB3F30;
+      width: 33%;
+      text-align: center;
+    }
+    .disable{
+      color: rgb(228, 155, 149);
+      width: 33%;
+      text-align: center;
+    }
+    .picker{
+      width: 100%;
+      height: 100%;
+    }
+    .stack{
+      width: 33%;
+      text{
+        width: 100%;
+        text-align: center;
+      }
+    }
+  }
+}
+</style>

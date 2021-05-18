@@ -1,0 +1,164 @@
+<template>
+<div class="gift-wrap">
+    <block for="(ind, item) in giftList" tid="ind" if="giftList.length > 0">
+        <div class="consumption-item">
+            <div class="consumption-item-row">
+                <div class="consumption-item-title"><text>{{item.type}}</text></div>
+                <div class="consumption-item-price">
+                    <div class="consumption-item-price-number" if="item.order_coin"><text>+{{item.order_coin}}</text><text>书币</text></div>
+                </div>
+            </div>
+            <div class="consumption-item-row">
+                <div class="consumption-item-tip"><text>有效期:{{getTime(item.premium_end)}}</text></div>
+                <div class="consumption-item-price">
+                    <div class="consumption-item-price-number"><text>+{{item.premium_coin}}</text></div><text>书券</text>
+                </div>
+                <!-- <div class="consumption-item-tip"><text>+{{item.order_premium}}</text></div><text>书券</text></div> -->
+            </div>
+            <!-- 定位的已使用和书币 -->
+            <!-- <div class="consumption-item-used"></div>
+            <div class="consumption-item-used-money"><div class="consumption-item-used-money-number"><text>+39</text></div><text>书币</text></div> -->
+        </div>
+    </block>
+    <div class="no-data" else>
+        <text>暂无赠送记录</text>
+    </div>
+
+    <!-- <div class="consumption-item">
+        <div class="consumption-item-row">
+            <div class="consumption-item-title"><text>首次充值赠送</text></div>
+            <div class="consumption-item-right">
+                <div class="consumption-item-price-numbers"><text>50</text></div><text>书币</text>
+            </div>
+        </div>
+        <div class="consumption-item-row">
+            <div class="consumption-item-tip"><text>首次充值赠送首次充值赠送</text></div>
+            <div class="consumption-item-rights"><text>2020-08-22 23:59</text></div>
+        </div>
+        <div class="consumption-item-more">></div>
+    </div> -->
+
+</div>
+</template>
+<script>
+import $ajax from '../../Common/js/ajax.js'
+import comm from '../../Common/js/comm.js'
+import { pageEnter, pageLeave } from "../../SDK/TDSDK.min.js"
+
+export default {
+    // 用来接收页面跳转传递过来的参数
+    protected: {
+        book_id: ''
+    },
+    private: {
+        pageName: '赠送记录',
+        // token: '',
+        giftList: [
+        ],
+        arr: [
+            {
+                channel_name: "googlepay沙盒支付",
+                currency_code: "USD",
+                order_coin: 21000,
+                order_fee: 49.99,
+                order_modify: 1585206844,
+                order_premium: 5000,
+                product_name: "充值魔币"
+            }
+        ],
+    },
+    onInit() {
+        // let _this = this
+        // storage.get({
+        //     key: 'token',
+        //     success: function(data){
+        //         console.log('token', data)
+        //         _this.token = data
+        //     }
+        // })
+        this.$page.setTitleBar({ text: '赠送记录' })
+        this.getGiftList({})
+    },
+    onShow() {
+        let _this = this
+        pageEnter(_this.pageName);
+    },
+    onHide() {
+        let _this = this
+        pageLeave(_this.pageName);
+    },
+    getGiftList(params) {
+        $ajax.get('/v1/user.premium', params).then(res=>{
+            console.log('giftlist', res)
+            this.giftList = res.code ? [] : res        
+            // let lastTime = comm.getDayAndTime(this.surplusTime - this.dateNow)
+
+        })
+    },
+    getTime(val){
+        return comm.getTimeStr(val * 1000)
+    }
+
+    
+}
+</script>
+<style lang="less">
+.gift-wrap{
+    display: flex;
+    flex-direction: column;
+    background-color: #F2F2F2;
+    .consumption-item{
+        width: 100%;
+        height: 160px;
+        display: flex;
+        /* flex: 1; */
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 20px 30px;
+        box-sizing: border-box;
+        position: relative;
+        background-color: #fff;
+        margin-bottom: 20px;
+        .consumption-item-row{
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0; 
+            .consumption-item-title{
+                font-size: 14px;
+                color: #333333;
+            }
+            .consumption-item-price{
+                display: flex;
+                align-items: center;
+                font-size: 14px;
+                color: #333333;
+                .consumption-item-price-number{
+                    font-size: 18px;
+                    font-weight: bold;
+                    color: #e2356e;
+                }
+            }
+            .consumption-item-tip{
+                font-size: 14px;
+                color: #999999;
+            }
+        }
+    }
+    .no-data{
+        flex: 1;
+        background-color: #ffffff;
+        text{
+            width: 100%;
+            height: 100px;
+            line-height: 100px;
+            text-align: center;
+            font-size: 30px;
+            color: #666;
+        }
+    }
+
+}
+</style>
+
+

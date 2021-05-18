@@ -1,0 +1,476 @@
+<template>
+<div class="welfare-wrap">
+    <div class="banner-box">
+      <div class="sign-box">
+        <div class="sign-tit"><text>已经签到</text><text class="num">{{consecutive_days}}</text><text>天</text></div>
+        <div class="sign-tip"><text>每日签到送书券，连续7天有惊喜！</text></div>
+        <div class="sign-list">
+          <block for="(ind, item) in signInList">
+          <div class="sign-list-item">
+            <div class="coin"><text>+{{item.premium}}</text><text>书币</text></div>
+            <div class="status {{item.status == 'unsign' ? '' : 'signed-status'}}"></div>
+            <div class="days"><text>{{item.signed_day}}天</text></div>      
+            <!-- <div class="dotted-line"></div>                 -->
+          </div>
+          </block>
+        </div>
+        <div class="sign-btn-box" @click="goSignIn">
+          <text class="sign-btn {{today_sign_status == 'unsign' ? 'sign-btn' : 'signed-btn'}}">{{today_sign_status == 'unsign' ? '签到' : '已签到'}}</text>
+        </div>
+      </div>
+    </div>
+
+    <div class="active-banner-box" show="welfareList.banner">
+      <image class="banner-img" src="{{welfareList.banner ? welfareList.banner.image : ''}}"></image>
+    </div>
+    <div class="line-box"></div>
+    <!-- <div class="tab-box"> -->
+    <!--tab组件-->
+    <tabs class="tabs" onchange="changeTabactive" index="{{tabInd}}">
+      <tab-bar class="tab-bar">
+        <text class="tab-text {{tabInd == 0 ? 'checked' : ''}}">新手福利</text>
+        <text class="tab-text {{tabInd == 1 ? 'checked' : ''}}">每日领币</text>
+      </tab-bar>
+      <tab-content class="tab-content" scrollable="{{scrollable}}">
+        <!--新手福利-->
+        <div class="item-container">
+          <block for="(ind, item) in tabList.once_welfare_list">
+            <div class="tab-item {{tabList.once_welfare_list.length - 1 == ind ? 'last-item' : ''}}">
+              <div class="left-item">
+                <div class="task"><text class="task-name">{{item.task_name}}</text><image class="icon-coin" src="../Common/images/coin.png"></image><text class="task-coin">{{item.reward_value}}{{item.unit}}</text></div>
+                <text class="task-desc">{{item.desc}}</text>
+              </div>
+              <div class="right-item">
+                <text class="btn btn-0" show="{{item.status_code == 'receive'}}">未领取</text>
+                <text class="btn btn-1" show="{{item.status_code == 'already_received'}}">已领取</text>
+                <text class="btn btn-2" show="{{item.status_code == 'hang_in_the_air'}}" @click="goFinish(item)">去完成</text>
+              </div>
+            </div>
+          </block>
+        </div>
+        <!--每日领币-->
+        <div class="item-container">
+        <!-- <text>{{tabList.welfare_list}}</text> -->
+          <block for="(ind, item) in tabList.welfare_list">
+            <div class="tab-item {{tabList.welfare_list.length - 1 == ind ? 'last-item' : ''}}">
+              <div class="left-item">
+                <div class="task"><text class="task-name">{{item.task_name}}</text><image class="icon-coin" src="../Common/images/coin.png"></image><text class="task-coin">{{item.reward_value}}{{item.unit}}</text></div>
+                <text class="task-desc">{{item.desc}}</text>
+              </div>
+              <div class="right-item">
+                <text class="btn btn-0" show="{{item.status_code == 'receive'}}">未领取</text>
+                <text class="btn btn-1" show="{{item.status_code == 'already_received'}}">已领取</text>
+                <text class="btn btn-2" show="{{item.status_code == 'hang_in_the_air'}}" @click="goFinish(item)">去完成</text>
+              </div>
+            </div>
+          </block>
+        </div>
+      </tab-content>
+    </tabs>
+    <!-- </div> -->
+
+</div>
+</template>
+<script>
+import router from '@system.router'
+import storage from '@system.storage'
+import shortcut from '@system.shortcut'
+import $ajax from '../Common/js/ajax.js'
+import { pageEnter, pageLeave } from "../SDK/TDSDK.min.js"
+import share from '@service.share'
+
+export default {
+  data: {
+    pageName: '签到领福利',
+    scrollable: true,
+    theme_color: '',
+    theme_btn_color: '',
+    signInList: [], // 签到列表
+    welfareList: {}, // 任务列表
+    tabList: {}, // tab列表
+    consecutive_days: 0, // 连续签到天数
+    today_sign_status: 'unsign', // 今天签到状态
+    tabInd: 1, // 默认tab值
+  },
+  onInit(query) {
+    let _this = this
+    console.log('query', query)
+    // 获取主题色
+    this.theme_color = this.$app.$def.GlobalColor.themeColorArr[_this.$app.$def.GlobalColor.theme_name].theme_color
+    this.theme_btn_color = this.$app.$def.GlobalColor.themeColorArr[_this.$app.$def.GlobalColor.theme_name].theme_btn_color
+    this.getSignInList()    
+    this.getWelfareList()    
+    
+  },
+  onShow() {
+    let _this = this
+    let query = this.$page.query
+    pageEnter(_this.pageName);
+  },
+  onHide() {
+    let _this = this
+    pageLeave(_this.pageName);
+  },
+  // 获取签到列表
+  getSignInList(){
+    let _this = this
+    $ajax.get(`/v1/sign.continued_list`).then(res=>{
+      _this.signInList = res.list
+      _this.consecutive_days = res.consecutive_days
+      let today = this.getDate()
+      _this.signInList.forEach((item)=>{
+        if(item.date == today){
+          _this.today_sign_status = item.status
+        }
+      })
+    })
+  },
+  // 提交签到
+  goSignIn(){
+    let _this = this
+    if(_this.today_sign_status == 'signed'){
+      return false
+    }
+    $ajax.get(`/v1/sign.continued`).then(res=>{
+      console.log('welfare_suc', res)
+      // if(res){
+      //   _this.getSignInList()
+      // }
+      _this.getSignInList()
+    })
+  },
+  // 获取任务福利列表
+  getWelfareList(){
+    let _this = this
+    $ajax.get(`/v1/welfare.daily?once_task_type=1004`).then(res=>{
+      console.log('welfare_res', res)
+      _this.welfareList = res
+      _this.tabList = {welfare_list: [...res.welfare_list],once_welfare_list: [...res.once_welfare_list]}
+
+      // once_welfare_list: [...res.once_welfare_list]}
+      console.log('tabList', _this.tabList)
+      // _this.consecutive_days = res.consecutive_days
+      // let today = this.getDate()
+      // _this.signInList.forEach((item)=>{
+      //   if(item.date == today){
+      //     _this.today_sign_status = item.status
+      //   }
+      // })
+    })
+  },
+  // 切换tab
+  changeTabactive (e) {
+    this.tabInd = e.index
+  },
+  // 去完成
+  goFinish(item){
+    console.log('item', item)
+    // 
+    if(item.id == 20 || item.id == 22){
+      // 去订阅书或章节
+      this.routePath('/book/bookshelf')
+    }else if(item.id == 21){
+      // 去充值
+      this.routePath('/pay')
+    }else if(item.id == 19){
+      // 去分享
+      this.toShare()
+    }
+  },
+  toShare(){
+    share.share({
+      shareType: 0,
+      title: 'XX小说',
+      summary: '摘要',
+      imagePath: 'http://fm.moqing.com/cover/wyq/88/14388-large.jpg',
+      targetUrl: 'https://www.baidu.com',
+      platforms: ['WEIXIN', 'WEIXIN_CIRCLE'],
+      success: function(data) {
+        console.log('handling success')
+      },
+      fail: function(data, code) {
+        console.log(data)
+        console.log(`handling fail, failMess=${data},code=${code}`)
+        // https://hapjs.org/app/com.xinmo.quickapp/book/reader?book_id=XXX&chapter_id=XXX
+      }
+    })
+  },
+  getDate(){
+    var d = new Date()
+    var year = d.getFullYear()
+    var month = d.getMonth() + 1 // 记得当前月是要+1的
+    var dt = d.getDate()
+    if ( month < 10){
+      month = "0" + month;
+    }
+    if ( dt < 10){
+      dt = "0" + dt;
+    }
+    var today = year + "-" + month + "-" + dt
+    return today
+  },
+  // 页面跳转
+  routePath (path, params) {
+    router.push({
+      uri: path,
+      params: params
+    })    
+  },
+  onBackPress () {
+    router.back()
+
+    // this.$element('web').canBack({
+    //   callback: function (e) {
+        // router.replace({
+        //   uri: 'Home'
+        // })
+    //   }.bind(this)
+    // })
+    // 阻止默认行为，等待异步操作
+    return true
+  },  
+
+ 
+  
+}   
+
+</script>
+<style lang="less" scoped>
+.welfare-wrap{
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  height: auto;
+  .banner-box{
+    width: 100%;
+    height: 612px;
+    padding-top: 180px;
+    background-image: url(../Common/images/banner.png);
+    background-size: 100%;
+    background-repeat: no-repeat;
+    margin-bottom: 20px;
+    .sign-box{
+      /* position: relative;
+      top: -80px; */
+      width: 720px;
+      height: 432px;
+      margin: 0 auto;
+      padding: 30px 20px;
+      border-radius: 20px;      
+      flex-direction: column;
+      border: 3px solid #CACACA;
+      background-color: #FFFFFF;      
+      box-shadow: 0px 2px 16px 0px #CACACA;
+      .sign-tit{
+        text{
+          height: 44px;
+          font-size: 32px;
+          font-weight: 600;
+          color: #333333;
+          line-height: 44px;
+        }
+        .num{
+          color: #FF4800;
+        }
+      }
+      .sign-tip{
+        padding-top: 10px;
+        padding-bottom: 30px;
+        text{
+          height: 30px;
+          font-size: 20px;
+          font-weight: 500;
+          color: #666666;
+          line-height: 30px;
+        }
+      }
+      .sign-list{
+        justify-content: space-between;
+        background-image: url('../Common/images/dotted_line.png');
+        background-size: 100px;
+        background-repeat: repeat-x;
+        background-position: 50px 86px;
+        .sign-list-item{
+          flex-direction: column;
+          align-items: center;
+          position: relative;
+          .coin{
+            flex-direction: column;
+            padding: 10px;                
+            background-color: #FFFAE8;
+            /* margin-bottom: 10px; */
+            text{                  
+                height: 34px;
+                font-size: 24px;
+                font-weight: 500;
+                color: #773800;
+                line-height: 34px;
+            }
+          }
+          .status{
+            margin-top: 10px;
+            width: 32px;
+            height: 42px;
+            background-image: url('../Common/images/circle_1.png');
+            background-size: 100%;
+            background-repeat: no-repeat;
+            
+          }
+          .signed-status{
+            background-image: url('../Common/images/circle_2.png');
+          }
+          .days{
+            padding-top: 10px;
+            text{
+              font-size: 20px;
+              font-weight: 500;
+              color: #333333;
+            }
+          }
+          /* .dotted-line{
+            position: absolute;
+            left: 60px;
+            top: 100px;
+            width: 80px;
+            height: 0;
+            border-bottom-color: #E1E1E1;
+            border-bottom-style: dotted;
+            border-bottom-width: 3px;
+          } */
+        }
+      }
+      .sign-btn-box{
+        .sign-btn{
+          width: 384px;
+          height: 76px;            
+          font-size: 30px;
+          font-weight: 500;
+          color: #4B2300;
+          text-align: center;
+          line-height: 76px;
+          background-color: #FFCB3D;
+          border-radius: 38px;
+          margin: 40px auto 20px;
+        }
+        .signed-btn{
+          width: 384px;
+          height: 76px;            
+          font-size: 30px;
+          font-weight: 500;
+          color: #999999;
+          text-align: center;
+          line-height: 76px;
+          background-color: #D9D9D9;
+          border-radius: 38px;
+          margin: 40px auto 20px;
+        }
+      }
+    }
+  }
+  .active-banner-box{
+    margin-bottom: 26px;
+    .banner-img{
+      width: 720px;
+      height: auto;
+      margin: 0 auto;
+      border-radius: 20px;
+    }
+  }
+  .line-box{
+    width: 100%;
+    height: 20px;
+    background-color: #F8F8F8;
+  }
+  /* .tab-box{ */
+    /* width: 720px;
+    margin: 30px auto 50px;
+    flex-direction: column; */
+    .tabs{
+      width: 720px;
+      margin: 0 auto;
+      flex-direction: column; 
+      .tab-bar{
+        .tab-text{          
+          font-size: 30px;
+          font-weight: 500;
+          color: #333333;
+          padding-bottom: 10px;
+        }
+        .checked{
+          color: #EB402F;
+          border-bottom: 4px solid #EB402F;
+        }
+      }
+      .tab-content{
+        /* flex-direction: column; */
+        .item-container{
+          flex-direction: column;
+          .tab-item{
+            flex: 1;   
+            /* flex-direction: column; */
+            justify-content: space-between;
+            padding: 30px 0;
+            border-bottom: 2px solid #F2F2F2;
+            .left-item{
+              flex-direction: column;
+              .task{
+                .task-name{
+                  font-size: 30px;
+                  font-weight: 600;
+                  color: #333333;
+                }
+                .icon-coin{
+                  width: 26px;
+                  height: 26px;
+                  margin-top: 6px;
+                  margin-left: 16px;
+                  margin-right: 16px;
+                }
+                .task-coin{
+                  font-size: 24px;
+                  font-weight: 500;
+                  color: #EB5567;
+                }
+              }
+              .task-desc{
+                font-size: 24px;
+                font-weight: 500;
+                color: #666666;
+                padding-top: 10px;
+              }
+            }
+            .right-item{
+              align-items: center;
+              .btn{
+                width: 126px;
+                height: 58px;
+                color: #EB402F;
+                text-align: center;
+                line-height: 56px;
+                border-radius: 29px;
+                border: 2px solid #EB402F;
+              }
+              .btn-0{
+                color: #F5A623;
+                border: 2px solid #F5A623;
+              }
+              .btn-1{
+                color: #999999;
+                border: 2px solid #999999;
+              }
+              .btn-2{
+                color: #EB402F;
+                border: 2px solid #EB402F;
+              }
+            }
+
+          }
+          .last-item{
+            border-bottom-color: #ffffff;
+          }
+        }
+      }
+    }
+  /* } */
+}
+</style>

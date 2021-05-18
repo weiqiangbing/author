@@ -1,0 +1,126 @@
+<template>
+  <div class="book-subscribe-page">
+   <!-- <web allowthirdpartycookies="true" id="web" src="{{$app.$def.h5_url}}/book/{{book_id}}/{{chapter_id}}.html" onpagestart="emitEvt"></web> -->
+   <div class="book-chapter-tit">
+     <text>第22章 摄政王是流—氓！</text>
+   </div>
+    <div class="thank-you-tip">
+      <text>谢谢你们的一路追书，谢谢你们的支持。到这里免费的章节已结束，本章开始收费，后续内容更精彩，请大家继续支持，爱你们～</text>
+    </div>
+    <div class="auto-sub">
+      <input id="checkbox1" class="color-1" type="checkbox" name="checkbox" value="'checkbox1'" checked="true" onchange="showChangePrompt"></input>
+      <div class="auto-sub-text"><text>自动购买下一章</text></div>   
+    </div>
+    <div class="pay-btn">
+      <div class="btn"><text>余额不足，充值并订阅</text></div>
+    </div>
+    
+    
+  </div>
+</template>
+
+<script>
+import router from '@system.router'
+import storage from '@system.storage'
+
+export default {
+  protected: {
+    book_id: 0,
+    chapter_id: 0,
+    params: ''
+  },
+  onInit() {
+    let _this = this
+    let query = this.$page.query
+    console.log('query', query)
+    if(query.book_id){
+      this.book_id = query.book_id
+      this.chapter_id = query.chapter_id
+    }
+    // this.$page.setTitleBar({text: '微言情Lite'})
+    // 页面初始化数据
+    console.log('book_id', this.book_id)
+    console.log('chapter_id', this.chapter_id)    
+   
+  },
+  emitEvt(url, e){
+    console.log('url', url)
+    console.log('e', e)
+  }
+ 
+  
+}
+</script>
+<style lang="less">
+.book-subscribe-page{
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: #fff;
+  .book-chapter-tit{
+    padding-top: 80px;
+    padding-bottom: 50px;
+    text{
+      width: 100%;
+      /* height: 60px; */
+      line-height: 60px;
+      font-size: 50px;
+      font-weight: 600;
+      color: #333;
+      text-align: center;
+    }    
+  }
+  .thank-you-tip{
+    display: flex;
+    flex-direction: column;
+    padding-top: 50px;
+    padding: 50px 30px 20px;
+    text{
+      width: 100%;
+      height: auto;
+      color: #666;
+      font-size: 34px;
+      text-indent: 2em;
+      line-height: 54px;      
+      word-wrap: break-word;
+    }
+  }
+  .auto-sub{
+    /* .color-1 {
+      background-color: #09ba07;
+    }
+    .color-1:active {
+      background-color: #098807;
+    } */
+    .auto-sub-text{
+      text{
+        color: #929292;
+        font-size: 30px;
+      }
+    }
+  }
+  .pay-btn{
+    padding: 30px;
+    .btn{
+      width: 100%;
+      height: 80px;
+      line-height: 80px;
+      text-align: center;
+      background-color: #09BB07;
+      border-radius: 10px;
+      text{
+        color: #fff;
+        width: 100%;
+        height: 80px;
+        line-height: 80px;
+        text-align: center;
+
+      }
+    }
+  }
+  
+}
+
+</style>
+

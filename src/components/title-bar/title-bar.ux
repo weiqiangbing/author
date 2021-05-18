@@ -1,0 +1,111 @@
+<!-- demo -->
+<!-- 
+<import name="btn" src="../components/btn.ux"></import>
+<template>
+  <div class="demo-page">
+    <btn btn-type="primary" title="primary" onclick-btn="clickBtn(0)"></btn>
+    <btn btn-type="warning" title="warning" onclick-btn="clickBtn(1)"></btn>
+    <btn btn-type="danger" title="danger" onclick-btn="clickBtn(2)"></btn>
+  </div>
+</template>
+<script>
+export default {
+  clickBtn(id) {
+    console.log(id)
+  }
+}
+</script>
+
+<style>
+.demo-page {
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+</style>
+ -->
+
+<template>
+  <div class="title-bar-wrap" style="background-color: {{theme_color}};">
+    <div class="app-name"><text>若看小说</text></div>    
+    <div class="search-input"><text class="icon-font">&#xe61e;</text><text class="place-tex">作品或者内容</text></div>
+    <div class="menu-btn"></div>
+  </div>
+</template>
+
+<script>
+export default {
+  props: {
+    btnType: {
+      type: String,
+      default: 'primary'
+    },
+    title: {
+      type: String,
+      default: '点击按键'
+    }
+  },
+  data: {
+    theme_color: '',
+    theme_btn_color: '',
+  },
+  onInit() {
+    let _this = this
+    // console.log('page', this.$page.getMenuBarRect())
+    // this.$page.setMenubarData({
+    //   menuBarBottom: 223,
+    //   menuBarHeight: 71,
+    //   menuBarLeft: 822,
+    //   menuBarRight: 1036,
+    //   menuBarTop: 152,
+    //   menuBarwidth: 214
+    // })
+    // 获取主题色
+    this.theme_color = this.$app.$def.GlobalColor.themeColorArr[_this.$app.$def.GlobalColor.theme_name].theme_color
+    this.theme_btn_color = this.$app.$def.GlobalColor.themeColorArr[_this.$app.$def.GlobalColor.theme_name].theme_btn_color
+  },
+  clickBtn() {
+    this.$emit('clickBtn')
+  }
+}
+</script>
+
+<style lang="less" scoped>
+@font-face {
+  font-family: iconfont;
+  src: url("../../Common/css/iconfont.ttf");
+}
+.icon-font{
+  font-family: iconfont;
+  font-size: 50px;
+}
+.title-bar-wrap{
+  display: flex;
+  padding: 20px 0 20px;
+  .app-name{
+    padding-left: 42px;
+    text{
+      height: 44px;
+      font-size: 34px;
+      font-family: PingFangSC-Semibold,PingFang SC;
+      font-weight: 600;
+      color: #000000;
+      line-height: 44px;
+      margin-top: 5px;
+      margin-bottom: 5px;
+    }
+  }
+  .search-input{
+    width: 304px;
+    height: 56px;
+    margin-left: 46px;
+    background-color: #fff;
+    border-radius: 44px;
+    .icon-font{
+      color: #9DA0A9;
+      font-size: 40px;
+      padding: 0 20px;
+    }
+  }
+}
+</style>

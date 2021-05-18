@@ -1,0 +1,514 @@
+<import name="title-bar" src="../components/title-bar/title-bar.ux"></import>
+<template>
+  <div class="home-page">
+    <title-bar></title-bar>
+    <div class="channel-box">
+
+    </div>
+    <div class="web-box">
+      <web allowthirdpartycookies="true" id="web" src="{{$app.$def.h5_url}}/{{fc ? '?fc=' + fc : '?fc=' + 0}}" onpagestart="emitEvt" ontitlereceive="titleEvt"></web>      
+    </div>
+    <div class="tab-box" if="tabIsShow">
+      <block for="{{tabItemList}}">
+        <div class="tab-items" onclick="setIndex($idx)">
+          <block if="{{$idx==flag}}">
+            <image class="tab-img" src="{{dataMap[$item].selectedIcon}}"></image>
+            <text class="tab-text" style="color: #0faeff;">{{dataMap[$item].name}}</text>
+          </block>
+          <block else>
+            <image class="tab-img" src="{{dataMap[$item].icon}}"></image>
+            <text class="tab-text">{{dataMap[$item].name}}</text>
+          </block>
+        </div>
+      </block>
+    </div>
+    <div class="create-desktop-icon-dialog" if="created_dialog">      
+      <div class="desktop-icon-box">
+        <div class="close-circle" onclick="colseDialog"><image src="{{close_url}}"></image></div>
+        <div class="phone"><image src="{{phone_url}}"></image></div>
+        <div class="creat-desktop-tip"><text class="tip-text">添加成功，下次可直接</text><text class="origin-color">从手机桌面打开【若看小说】</text></div>
+        <div class="close-btn" onclick="colseDialog"><text class="iknow">我知道了</text></div>
+      </div>
+    </div>
+    <!-- 创建快捷方式 -->
+    <input if="!isCreated && tabIsShow" class="create-shortcut" type="button" onclick="createShortcut" value="保存到手机，方便下次看书" />
+
+    <div style="display: none;">
+      <web allowthirdpartycookies="true" onpagestart="emitEvt2" id="web2" src="{{$app.$def.h5_user_url}}/member/loginByQuickAppCookie?uc={{cookie.uc}}&_auth_={{cookie._auth_}}"></web>
+    </div>
+  </div>
+</template>
+
+<script>
+import router from '@system.router'
+import { tabsData } from '../Common/data.js'
+import shortcut from '@system.shortcut'
+import storage from '@system.storage'
+import prompt from '@system.prompt'
+// import { setGlobalData, getGlobalData } from '../global.js'
+import { pageEnter, pageLeave, selfEvent } from "../SDK/TDSDK.min.js"
+// import { setTDChannelId, quickInit } from "../SDK/TDSDK.min.js";
+import comm from '../Common/js/comm.js'
+import $ajax from '../Common/js/ajax.js'
+
+let cookie_url_test = 'http://user.litong.quick.xdyq.com'
+let cookie_url = 'http://user.fwyq.meixiangdao.com'
+export default {
+  // protected: {
+  //   book_id: 0,
+  //   chapter_id: 0
+  // },
+  data() {
+    return {
+      pageName: '首页',
+      fc: 0,
+      flag: 1,
+      tabIsShow: false,
+      isCreated: false,
+      created_dialog: false,
+      tabItemList: [],
+      dataMap: tabsData,
+      phone_url: require('../common/phone.png'),
+      close_url: require('../common/close.png'),
+      page_url: '',
+      url: '',
+      cookie: {}
+    }    
+  },
+  onInit() {
+    let _this = this  
+    let querys = this.$page.query
+    // console.log('home_querys', querys)
+    // console.log('userId', this.$app.userId)
+    // let params = {
+    //   quick_user_id: _this.$app.userId
+    // }
+    // this.automaticLogin(params)
+    comm.setChannelId(querys.fc)
+    //渠道设置
+    // setTDChannelId(querys.fc)//channelId为字符串形式，setTDChannelId 的调用时机应当在quickInit之前
+    // //SDK初始化
+    // quickInit();
+    
+    // 初始化tabItemList
+    this.tabItemList = [].concat(Object.keys(this.dataMap))
+    shortcut.hasInstalled({    
+      success: function (ret) {
+        // console.log('home_ret', ret)
+        if (ret) {
+          _this.isCreated = true
+          storage.set({
+            key: 'isCreated',
+            value: 1
+          })
+        }else{
+          _this.isCreated = false
+          storage.set({
+            key: 'isCreated',
+            value: 2
+          })
+        }
+      },
+      fail: function (err) {
+        console.log('err', err)
+      }
+    })
+
+    // 路由带参的话第一次进来跳阅读器 
+    let query = this.$page.query
+    // storage.clear()
+    storage.get({
+      key: 'openFirst',
+      success: function(data) {
+        if(data != 'yes'){
+          storage.set({
+            key: 'openFirst',
+            value: 'yes'
+          })
+          // fc 渠道号
+          if(query.book_id && query.chapter_id){
+            router.push({
+              uri: '/book/reader',
+              params: {book_id: query.book_id, chapter_id: query.chapter_id, fc: query.fc}
+            })
+          }
+        }
+      },
+      fail: function(data, code) {
+        console.log(`handling fail, code = ${code}`)
+      }
+    })
+
+    storage.get({
+      key: 'cookie',
+      success: function(data){
+        let cookie =  data ? JSON.parse(data) : ''
+        console.log('home_cookie', cookie)
+        _this.cookie = {
+          uc: encodeURIComponent(cookie.uc),
+          _auth_: encodeURIComponent(cookie._auth_),
+        }
+        console.log('cookie', _this.cookie)
+      }
+    })
+
+    // 判断用户打开应用大于7天将创建快捷键隐藏
+    let time = new Date().getTime()
+    // storage.clear()
+    storage.get({
+      key: 'openTime',
+      success: function(data) {
+        let old_time = data ? JSON.parse(data) : 0
+        if(!data){
+          storage.set({
+            key: 'openTime',
+            value: time
+          })
+        }else{
+          let days = (time - old_time) / (1000*60*60*24)
+          // console.log('days', days)
+          if(days > 7){
+            _this.isCreated = true
+          }          
+        }       
+      },
+      fail: function(data, code) {
+        console.log(`handling fail, code = ${code}`)
+      }
+    })
+  },
+  // urlencode (str) {
+  //   str = (str + '').toString();
+  //   return encodeURIComponent(str).replace(/!/g, '%21').replace(/'/g, '%27').replace(/\(/g, '%28').  
+  //   replace(/\)/g, '%29').replace(/\*/g, '%2A').replace(/%20/g, '+');  
+  // },
+  onShow() {
+    let _this = this
+    let query = this.$page.query
+    console.log('home', this.$element('web'))
+    // console.log('home', this.$element('web')._attr.src)
+    if(query.fc){
+      this.fc = query.fc
+      storage.set({
+        key: 'fc',
+        value: query.fc
+      })
+      console.log('setFc', query.fc)
+      // setGlobalData('$fc', query.fc)     
+      // console.log('home_fc', getGlobalData('$fc') )
+    }
+    // if(query.book_id && query.chapter_id){
+    //   router.push({
+    //     uri: '/book/reader',
+    //     params: {book_id: query.book_id, chapter_id: query.chapter_id, fc: query.fc}
+    //   })
+    // }   
+    // let src = this.$element('web')._attr.src
+    // this.emitEvt({url: src})
+    this.emitEvt({url: _this.url})
+    pageEnter(_this.pageName);
+    
+  },
+  onHide() {
+    let _this = this
+    pageLeave(_this.pageName);
+  },
+  createShortcut () {
+    let _this = this
+    // 创建快捷方式
+    this.$app.$def.createShortcut((isTrue)=>{
+      if (isTrue) {
+        _this.isCreated = true
+        _this.created_dialog = true
+      }else{
+        _this.isCreated = false
+      }
+    })
+  },
+  colseDialog(){
+    let object = {
+      "eventId": "001", //开发者自定义事件ID，开发者自己上传
+      "label": "创建快捷桌面成功", //开发者自己上传label
+      "params": {
+        "createDesktop": "suc", // 自定义参数，开发者自己上传
+      }
+    }
+    selfEvent(object);
+    this.created_dialog = false
+  },
+  // onBackPress () {
+  //   this.$element('web').canBack({
+  //     callback: function (e) {
+  //       if (e) {
+  //         // 加载历史列表中的上一个 URL
+  //         this.$element('web').back()
+  //       } else {
+  //         router.back()
+  //       }
+  //     }.bind(this)
+  //   })
+  //   // 阻止默认行为，等待异步操作
+  //   return true
+  // },  
+  emitEvt2(url, e){
+    console.log(2222, url)
+    storage.get({
+      key: 'cookie',
+      success: function(data){
+        if(data){
+          return true
+        }else{
+          return false
+        }
+      }
+    })
+    // setTimeout(function(){
+
+    // }, 2000)
+  },
+  emitEvt(url, e){
+
+    // this.$dispatch('dispathEvt', {
+    //   url: url.url
+    // })
+    let evt = url.url
+    console.log('evt', evt)
+    let _this = this
+    _this.tabIsShow = false
+    _this.url = url.url
+    let value = evt.substring(evt.indexOf('.com')+4)
+    console.log('a', value)
+    this.page_url = value
+    if(value.indexOf('/member/bookshelf') != -1 || value == '/' || value.indexOf('/?') != -1 || value == '/all' || value == '/all.html' || value == '/member/my' || value == '/member/my.html' || value == '/member/login' || value == '/member/login.html'){
+      _this.tabIsShow = true
+    }
+
+    if(value == '/' || value.indexOf('/?') != -1 ){
+      _this.flag = 1
+    }else if(value.indexOf('/member/bookshelf') != -1){
+      _this.flag = 0
+    }else if(value.indexOf('/member/my') != -1){
+      _this.flag = 3
+    }
+  },
+  titleEvt(e){
+    // 设置标题栏
+    this.$page.setTitleBar({ text: e.title })
+  },
+  // 页面跳转
+  routePath (path, params) {
+    router.push({
+      uri: path,
+      params: params
+    })
+  },
+  //修改flag实现点击导航栏显示不同的页面，pos为传入的参数
+  setIndex: function (pos) {	
+    console.log('pos', pos)
+    //设置flag，flag改变后显示的页面也会对应的改变	
+    this.flag = pos
+    if(pos == 0){
+      router.replace({
+        uri: 'BookShelf'
+      })
+    }else if(pos == 1){
+      router.replace({
+        uri: 'Home'
+      })
+    }else if(pos == 2){
+      router.replace({
+        uri: 'All'
+      })
+    }else if(pos == 3){
+      router.replace({
+        uri: 'User'
+      })
+    }
+  },
+  // this.page_url
+  onBackPress(){
+    let _this = this
+    // console.log('page_url')
+    // console.log(this.page_url)
+    // let book_id = this.page_url.substring(this.page_url.indexOf('txt03/')+6, this.page_url.indexOf('txt03/')+11)
+    // console.log('book_id',book_id)
+    // console.log(this.page_url == '/' || this.page_url.indexOf('/?') != -1)
+    if(this.page_url.indexOf('/book') != -1 || this.page_url.indexOf('/vip') != -1){
+      router.replace({
+        uri: 'Home'
+      })
+    }
+    if(this.page_url == '/' || this.page_url.indexOf('/?') != -1){
+      prompt.showDialog({
+        title: '若看小说',
+        message: '确定退出应用吗？',
+        buttons: [
+          {
+            text: '确定',
+            color: '#3ABBFE'
+          },
+          {
+            text: '取消',
+            color: '#3ABBFE'
+          }
+        ],
+        success: function(obj) {
+          if(obj.index){
+            return true
+          }else{
+            // return false
+            // _this.$page.finish()
+            _this.$app.exit()
+          }
+        },
+        cancel: function(data) {
+          console.log('handling cancel', data)
+        },
+        fail: function(data, code) {
+          console.log(`handling fail, data = ${data}`)
+          console.log(`handling fail, code = ${code}`)
+        }
+      })
+      // return true
+    }else{
+      _this.$element('web').canBack({
+        callback: function (e) {
+          if (e) {
+            // 加载历史列表中的上一个 URL
+            _this.$element('web').back()
+          } else {
+            router.back()
+          }
+        }.bind(_this)
+      })
+    }
+    return true
+  }
+  
+}
+</script>
+<style lang="less">
+.home-page{
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: #fff;
+  /* padding-bottom: 100px; */
+  position: relative;
+  .web-box{
+    flex: 1;
+  }
+  .tab-box{
+    height: 100px;
+    display: flex;
+    .tab-items{      
+      flex: 1;
+      flex-direction: column;
+      .tab-text {
+        text-align: center;
+        .checked-color{
+          color: #0faeff;
+        }
+        /* &:active {
+          color: #0faeff;
+        } */
+      }
+      .tab-img {
+        /* display: block; */
+        width: 50px;
+        margin: 0 auto;
+      }
+    }
+  }
+  .create-shortcut{  
+    position: absolute;
+    bottom: 120px;
+    left: 25px;
+    width: 700px;
+    /* z-index: inherit; */
+    color: #fff;
+    border-radius: 50px;
+    background-color: #DD4343;
+  }
+  .create-desktop-icon-dialog{
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 1500;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(0, 0, 0, .6);
+    
+    .desktop-icon-box{
+      width: 600px;
+      /* height: 800px; */
+      /* height: auto; */
+      background-color: #fff;
+      border-radius: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      .close-circle{
+        position: absolute;
+        top: 0;
+        right: 0;
+        image{
+          width: 70px;
+          height: 70px;
+        }
+      }
+      .phone{
+        width: 300px;
+        /* height: auto; */
+        margin-top: 50px;
+        image{
+          width: 100%;
+          /* height: auto; */
+        }
+      }
+      .creat-desktop-tip{
+        display: flex;
+        flex-direction: column;
+        width: 500px;
+        margin: 30px 0;
+        .tip-text{
+          color: #333;
+          font-size: 28px;
+          text-align: center;
+          line-height: 40px;          
+        }  
+        .origin-color{
+          color: #F46917;
+          font-size: 28px;
+          text-align: center;
+          line-height: 40px;
+        }      
+      }
+      .close-btn{
+        width: 500px;
+        height: 100px;        
+        background-color: #FF5B5F;
+        border-radius: 50px;
+        margin-bottom: 50px;
+        .iknow{
+          width: 100%;
+          height: 100%;
+          color: #fff;
+          font-size: 34px;
+          text-align: center;
+          line-height: 100px;
+        }
+      }
+    }
+  }
+  
+  
+}
+</style>
+

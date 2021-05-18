@@ -1,0 +1,876 @@
+<import name="my-button" src="../../components/button/index"></import>
+<template>
+  <div class="book-reader-page" style="background-color: {{themeList[themeInd].color}}">
+    <!-- 加载动画 -->
+    <div class="loading" if="chapterMsg.length <= 0 && !isShowPay && nowChapter.sentence.length <= 0">
+      <image class="tea-pic" src="{{load_url}}"></image>
+      <text class="load-tip">正在加载，请稍后......</text>
+    </div> 
+    <div class="chapter-box" elif="chapterMsg.length > 0" onclick="showMenu">
+      <!-- <richtext type="html" class="rich-text">{{styleObj}}{{content}}</richtext> -->
+      <list class="list-content" onscrollbottom="scrollbottom" id="list">
+        <list-item type="list-item" class="list-item" for="(ind, item) in chapterMsg">
+          <div class="chapter-title"><text class="chapter-tit-text" style="font-size: {{setTitStyle.fs}}px;line-height: {{setTitStyle.lh}}px;">{{item.name}}</text></div>
+          <div class="sentence-box">
+            <block for="{{(index, value) in item.sentence}}">
+              <text class="sentence-item" style="font-size: {{setConStyle.fs}}px;line-height: {{setConStyle.lh}}px;">{{value}}</text>
+              <!-- margin-bottom: {{setConStyle.mb}}px; -->
+            </block>
+          </div>
+        </list-item>
+      </list>
+      <!-- <my-button type="primary" size="large" onclick="getNextChapter">下一章</my-button> -->
+		</div>
+    <div class="chapter-box" elif="nowChapter.sentence.length > 0" onclick="showMenu">
+      <!-- <richtext type="html" class="rich-text">{{styleObj}}{{content}}</richtext> -->
+      <list class="list-content" onscrollbottom="scrollbottom" id="list">
+        <list-item type="list-item" class="list-item">
+          <div class="chapter-title"><text class="chapter-tit-text" style="font-size: {{setTitStyle.fs}}px;line-height: {{setTitStyle.lh}}px;">{{nowChapter.chapter.name}}</text></div>
+          <div class="sentence-box">
+            <block for="{{(index, value) in nowChapter.sentence}}">
+              <text class="sentence-item" style="font-size: {{setConStyle.fs}}px;line-height: {{setConStyle.lh}}px;">{{value}}</text>
+              <!-- margin-bottom: {{setConStyle.mb}}px; -->
+            </block>
+          </div>
+        </list-item>
+      </list>
+      <!-- <my-button type="primary" size="large" onclick="getNextChapter">下一章</my-button> -->
+		</div>
+    <div class="read-menu" if="{{isMenu}}">
+      <div class="top-menu">
+        <div class="back-btn"><text class="icon-font">&#xe605;</text></div>
+        <div class="book-title"><text>最强修炼系统</text></div>
+      </div>
+      <div class="bottom-menu">
+        <div class="switch-theme-box">
+          <block for="{{(ind, item) in themeList}}">
+          <div onclick="setThemeInd(ind)" class="theme-item {{themeInd == ind ? 'checked' : 'theme-item'}}" style="background-color: {{item.color}};"></div>
+          </block>
+        </div>
+        <div class="switch-size-box">
+          <div class="size-item {{!setSmall ? 'disabled_btn' : 'size-item'}}" onclick="handleSmallSize"><text>小字体</text></div>
+          <div class="size-num"><text>{{setConStyle.fs}}</text></div>
+          <div class="size-item {{!setBig ? 'disabled_btn' : 'size-item'}}" onclick="handleBigSize"><text>大字体</text></div>
+        </div>
+        <div class="book-catalog-box">
+          <div class="chapter-item prev-chapter-btn" @click="getPrevChapter()"><text class="icon-font">&#xe644;</text><text class="chapter-text">上一章</text></div>
+          <div class="chapter-item catalog-chapter-btn" @click="routePath('/book/catalogue', {book_id: params.book_id})"><text class="icon-font">&#xe607;</text><text class="chapter-text">目录</text></div>
+          <div class="chapter-item next-chapter-btn" @click="getNextChapter()"><text class="icon-font">&#xe644;</text><text class="chapter-text">下一章</text></div>
+        </div>
+      </div>
+    </div>  
+    <!-- 去充值 -->
+    <div if="isShowPay" class="pay-dialog">
+      <div class="pay-box">
+        <div class="right-close" onclick="closePayDialog"><text class="icon-font">&#xec31;</text></div>
+        <div class="pay-tip"><text>购买章节</text></div>
+        <div class="pay-tit"><text>{{nowChapter.chapter.name}}</text></div>
+        <div class="pay-price">
+          <text class="num">{{nowChapter.hint.price}}</text><text class="coin">书币</text>
+        </div>
+        <div class="pay-list">
+          <text class="balance">书币余额: </text><text>{{nowChapter.balance.coin ? nowChapter.balance.coin : 0}}书币+</text><text>{{nowChapter.balance.premium ? nowChapter.balance.premium : 0}}书券</text>        
+        </div>
+        <div class="sure-pay-btn">
+          <div class="btn" style="background-color: {{theme_btn_color}};" onclick="toPay"><text>获取书币</text></div>
+        </div>
+      </div>      
+    </div>
+
+    <!-- 第四章创建桌面奖励提示 -->
+    <div if="isCreateDesk" class="create-desk-dialog">
+      <div class="desk-tip-box">
+        <div class="desk-tit"><text>恭喜你</text></div>
+        <div class="desk-tip"><text>已将若看小说成功保存到手机桌面</text></div>
+        <div class="desk-get-coin"><image src="../../Common/images/gold_coin.png"></image><text>获赠30书券</text></div>
+        <div class="desk-line"><image src="../../Common/images/line.png"></image></div>
+        <div class="desk-phone"><image src="../../Common/images/phone.png"></image></div>
+        <div class="desk-des"><text>每天<span>从桌面打开【若看小说】</span></text><text>还能再领<span>15书券</span></text></div>
+        <div class="desk-btn" @click="closeDeskDialog"><text>我知道了</text></div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import router from '@system.router'
+import storage from '@system.storage'
+import shortcut from '@system.shortcut'
+import $ajax from '../../Common/js/ajax.js'
+import { pageEnter, pageLeave } from "../../SDK/TDSDK.min.js"
+import { getDecodeContent } from '../../Common/js/get_decode_content.js'
+
+export default {
+  data: {
+    pageName: '原生阅读器',
+    load_url: require('../../Common/images/tea.png'),
+    // sentence: [],
+    chapterMsg: [],
+    params: {
+      book_id: 0,
+      chapter_id: 0,
+      prev_chapter: 0,
+      next_chapter: 0
+    },
+    isMenu: false,
+    themeList: [
+      {
+        id: 0,
+        color: '#ffffff'
+      },
+      {
+        id: 1,
+        color: '#DFEDD6'
+      },
+      {
+        id: 2,
+        color: '#F8CEDA'
+      },
+      {
+        id: 3,
+        color: '#F4CB9D'
+      },
+    ],
+    themeInd: 0,
+    setTitStyle: {
+      fs: 40,
+      lh: 50,
+    },
+    setConStyle: {
+      fs: 28,
+      lh: 64,
+      // mb: 10,
+    },
+    setSmall: true,
+    setBig: true,
+    auto_subscribe: 1, // 自动订阅
+    auto_read_log: 1, // 自动添加到阅读历史
+    isShowPay: false,
+    isCreateDesk: false,
+    nowChapter: {
+      sentence: []
+    }, // 付费章节信息
+    theme_color: '',
+    theme_btn_color: '',
+  },
+  onInit(query) {
+    let _this = this
+    console.log('query', query)
+    // 获取主题色
+    this.theme_color = this.$app.$def.GlobalColor.themeColorArr[_this.$app.$def.GlobalColor.theme_name].theme_color
+    this.theme_btn_color = this.$app.$def.GlobalColor.themeColorArr[_this.$app.$def.GlobalColor.theme_name].theme_btn_color
+    // 记录背景色
+    storage.get({
+      key: 'themeInd',
+      success: function(data){
+        _this.themeInd = data
+        _this.$page.setStatusBar({
+          immersive: true,
+          textStyle: 'auto',
+          backgroundColor: _this.themeList[data].color,
+          backgroundOpacity: 1
+        })
+      },
+      fail: function(){
+        _this.$page.setStatusBar({
+          immersive: true,
+          textStyle: 'auto',
+          backgroundColor: '#ffffff',
+          backgroundOpacity: 1
+        })
+      }
+    })
+    // 记录字体大小
+    storage.get({
+      key: 'setTitStyle',
+      success: function(data){
+        _this.setTitStyle = JSON.parse(data)
+      }
+    })
+    storage.get({
+      key: 'setConStyle',
+      success: function(data){
+        _this.setConStyle = JSON.parse(data)
+      }
+    })
+
+    // 监听数据变化
+    // this.$watch('setSmall', 'watchSetSmallChange')
+
+  },
+  onShow() {
+    let _this = this
+    let query = this.$page.query
+    console.log('onshow', query)
+    // 获取书籍信息
+    this.params.book_id = parseInt(query.book_id)
+    if(query.book_id && query.chapter_id){
+      // this.getMsg({book_id: query.book_id * 1, chapter_id: query.chapter_id * 1})
+      this.getMsg({book_id: parseInt(query.book_id), chapter_id: parseInt(query.chapter_id)})
+    }else{
+      this.getMsg(_this.params)
+    }
+    pageEnter(_this.pageName);
+  },
+  onHide() {
+    let _this = this
+    pageLeave(_this.pageName);
+  },
+  // 关闭充值弹窗
+  closePayDialog(){
+    this.isShowPay = false
+  },
+  // 关闭创建桌面成功福利提示弹窗
+  closeDeskDialog(){
+    this.isCreateDesk = false
+  },
+  // 获取书币
+  toPay(){
+    console.log(this.params.book_id)
+    console.log(this.nowChapter.chapter.id)
+    router.push({
+      uri: '/pay',
+      params: {
+        book_id: this.params.book_id,
+        chapter_id: this.nowChapter.chapter.id
+      }
+    })
+  },
+  getMsg(params){
+    console.log('reader-params', params)
+    let _this = this
+    $ajax.get(`/v1/chapter2/${params.book_id}/${params.chapter_id}?lang=zh-cn&auto_subscribe=${_this.auto_subscribe}&auto_read_log=${_this.auto_read_log}`).then(res=>{
+      console.log('reader_res', res)
+      let con = getDecodeContent.getConten(params.book_id, res.chapter.id,  res.chapter.content)
+      console.log('con', res.chapter)
+      let sentence = con.split(/[(\r\n)\r\n]+/);
+      sentence.forEach((item,index)=>{
+        if(!item){
+          sentence.splice(index,1);//删除空项
+        }
+      })
+      let chapterData = {...res.chapter}
+      chapterData.sentence = sentence
+      console.log('reader', res.chapter)
+      console.log('chapterData', chapterData)
+      console.log('chapterMsg', _this.chapterMsg)
+      _this.params.chapter_id = res.chapter.id
+      _this.params.prev_chapter = res.chapter.prev_chapter ? res.chapter.prev_chapter.id : 0
+      _this.params.next_chapter = res.chapter.next_chapter ? res.chapter.next_chapter.id : 0
+      _this.nowChapter = res
+      _this.nowChapter.sentence = sentence
+      console.log('nowChapter', _this.nowChapter)
+      if(res.code == 9006){
+        _this.isShowPay = true
+        return false
+      }
+      // 判断章节内容数组大于20章清空一次
+      if(_this.chapterMsg.length > 20){
+        _this.chapterMsg = []
+      }
+      // 拼接每章节内容到数组中
+      _this.chapterMsg = _this.chapterMsg.concat(chapterData)
+      console.log('chapterMsg123', _this.chapterMsg)
+
+      // _this.$page.scrollTo({top: 500, behavior:'smooth'})
+      // _this.chapter_code * 1 - 1
+      // _this.$element('list').scrollTo({ index: 1})
+
+    })
+  },
+  // 页面跳转
+  routePath (path, params) {
+    router.push({
+      uri: path,
+      params: params
+    })    
+  },
+  scrolltop(){
+    console.log('top')
+    this.getPrevChapter()
+    this.$element('list').scrollTo({ index: 0 })
+  },
+  scrollbottom(){
+    console.log('bottom')
+    this.getNextChapter()
+    // this.$element('list').scrollTo({ index: 0 })
+  },
+  getPrevChapter(evt){
+    let _this = this
+    console.log('getPrevChapter')
+    if(!this.nowChapter.chapter.prev_chapter){
+      return false
+    }
+    // 阻止事件冒泡
+    // evt.stopPropagation()
+    // this.chapterMsg = []
+    this.params.chapter_id = _this.params.prev_chapter
+    // 获取书籍信息
+    this.getMsg(_this.params)
+  },
+  getNextChapter(evt){
+    let _this = this
+    console.log('getNextChapter')
+    if(!this.nowChapter.chapter.next_chapter){
+      return false
+    }
+    // 阻止事件冒泡
+    // evt.stopPropagation()
+    // this.chapterMsg = []
+    this.params.chapter_id = _this.params.next_chapter
+    // 判断是否已经创建快捷桌面，未创建到第四章默认给用户创建桌面
+    shortcut.hasInstalled({    
+      success: function (ret) {
+        // console.log('home_ret', ret)
+        if (!ret) {
+          // 获取章节目录，从而获取章节序号
+          storage.get({
+            key: 'catalogueList',
+            success: function(data){
+              let catalogueList = JSON.parse(data)
+              catalogueList.forEach((item)=>{
+                if(_this.params.next_chapter == JSON.parse(item.id)){
+                  console.log(item.chapter_code)
+                  _this.chapter_code = item.chapter_code
+                }
+              })
+            }
+          })
+          if(_this.chapter_code == 3){
+            // 创建桌面快捷方式
+            _this.createShortcut()
+            // _this.isCreateDesk = true
+          }
+        }
+      }
+    })
+    // 获取书籍信息
+    this.getMsg(_this.params)
+  },
+  createShortcut () {
+    let _this = this
+    // 创建快捷方式
+    this.$app.$def.createShortcut((isTrue)=>{
+      if (isTrue) {
+        _this.isCreateDesk = true
+      }else{
+        _this.isCreateDesk = false
+      }
+    })
+  },
+  showMenu(){
+    let _this = this
+    if(_this.isMenu){
+      this.$page.setStatusBar({
+        immersive: true,
+        textStyle: 'auto',
+        backgroundColor: '#F4CB9D',
+        backgroundOpacity: 1
+      })
+      _this.isMenu = false
+      this.$page.setStatusBar({
+        immersive: true,
+        textStyle: 'auto',
+        backgroundColor: this.themeList[_this.themeInd].color,
+        backgroundOpacity: 1
+      })
+    }else{
+      this.$page.setStatusBar({
+        immersive: true,
+        textStyle: 'auto',
+        backgroundColor: '#000000',
+        backgroundOpacity: 1
+      })
+      _this.isMenu = true
+    }
+  },
+  setThemeInd(ind){
+    let themeInd = JSON.stringify(ind)
+    this.themeInd = ind
+    storage.set({
+      key: 'themeInd',
+      value: themeInd
+    })
+  },
+  handleSmallSize(){
+    this.setSmall = true
+    this.setBig = true
+    if(this.setConStyle.fs <= 22){
+      this.setSmall = false
+    }else{
+      this.setConStyle.fs = this.setConStyle.fs - 6
+      this.setConStyle.lh = this.setConStyle.lh - 10
+      // this.setConStyle.mb = this.setConStyle.mb - 4 
+      this.setTitStyle.fs = this.setTitStyle.fs - 6
+      this.setTitStyle.lh = this.setTitStyle.lh - 10               
+    }
+    let setConStyle = JSON.stringify(this.setConStyle)
+    let setTitStyle = JSON.stringify(this.setTitStyle)
+    storage.set({
+      key: 'setTitStyle',
+      value: setTitStyle
+    })
+    storage.set({
+      key: 'setConStyle',
+      value: setConStyle
+    })
+  },
+  handleBigSize(){
+    this.setSmall = true
+    this.setBig = true
+    if(this.setConStyle.fs >= 52){
+      this.setBig = false
+    }else{
+      this.setConStyle.fs = this.setConStyle.fs + 6
+      this.setConStyle.lh = this.setConStyle.lh + 10
+      // this.setConStyle.mb = this.setConStyle.mb + 4  
+      this.setTitStyle.fs = this.setTitStyle.fs + 6
+      this.setTitStyle.lh = this.setTitStyle.lh + 10        
+    }
+    let setConStyle = JSON.stringify(this.setConStyle)
+    let setTitStyle = JSON.stringify(this.setTitStyle)
+    storage.set({
+      key: 'setTitStyle',
+      value: setTitStyle
+    })
+    storage.set({
+      key: 'setConStyle',
+      value: setConStyle
+    })
+  },
+  // watchSetSmallChange(newV, oldV){
+  //   console.info(`监听数据变化：`, newV, oldV)
+  //   this.setSmall = newV
+
+  // },
+  onBackPress () {
+      router.back()
+
+    // this.$element('web').canBack({
+    //   callback: function (e) {
+        // router.replace({
+        //   uri: 'Home'
+        // })
+    //   }.bind(this)
+    // })
+    // 阻止默认行为，等待异步操作
+    return true
+  },  
+
+ 
+  
+}
+</script>
+<style lang="less">
+@font-face {
+  font-family: iconfont;
+  src: url("../../Common/css/iconfont.ttf");
+}
+.icon-font{
+  font-family: iconfont;
+  font-size: 50px;
+}
+.book-reader-page{
+  width: 100%;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 80px 30px;
+  /* background-color: #F4CB9D; */
+  .loading{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 500px;
+    .tea-pic{
+      width: 60px;
+      height: auto;
+    }
+    .load-tip{
+      padding-top: 20px;
+      font-size: 32px;
+    }
+  }
+  .chapter-box{
+    display: flex;
+    flex-direction: column;
+    .list-content{
+      display: flex;
+      width: 100%;
+      height: 100%;
+      padding: 0;
+      margin: 0;
+      .list-item{
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        height: auto;
+        padding: 0;
+        margin: 0;      
+        .chapter-title{
+          .chapter-tit-text{
+            width: 100%;
+            height: auto;
+            line-height: 50px;
+            font-size: 40px;
+            text-align: center;
+            padding-top: 20px;
+            padding-bottom: 20px;
+          }
+        }
+        .sentence-box{
+          display: flex;
+          flex-direction: column;
+          .sentence-item{
+            font-size: 32px;
+            line-height: 50px;
+            /* margin-bottom: 10px; */
+          }
+        }
+      }
+    }
+  }
+  .read-menu{
+    display: flex;
+    flex-direction: column;
+    .top-menu{
+      position: fixed;
+      flex-direction: column;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 180px;
+      padding-top: 80px;
+      background-color: #000000;
+      .back-btn{
+        position: absolute;
+        left: 0;
+        top: 80px;
+        width: 20%;
+        .icon-font{
+          color: #fff;
+          font-size: 40px;
+          height: 100px;
+          line-height: 100px;
+          lines: 1;
+          text-overflow: ellipsis;
+          padding-left: 30px;
+          /* margin-top: 80px; */
+        }
+      }
+      .book-title{        
+        text{
+          width: 100%;
+          height: 180px;
+          color: #fff;
+          font-size: 38px;
+          text-align: center;
+          height: 100px;
+          line-height: 100px;
+          lines: 1;
+          text-overflow: ellipsis;
+          /* margin-top: 80px; */
+        }
+      }
+    }
+    .bottom-menu{
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: auto;
+      display: flex;
+      flex-direction: column;
+      padding: 40px 50px;
+      background-color: #000000;
+      .switch-theme-box{
+        padding: 10px 0 40px;
+        justify-content: space-between;
+        .theme-item{
+          width: 130px;
+          height: 60px;
+          border-radius: 10px;
+          border: 4px solid transparent;
+        }
+        .checked {
+          width: 130px;
+          height: 60px;
+          border-radius: 10px;
+          border: 4px solid #50B0E3;
+          /* &:active {
+            width: 130px;
+            height: 60px;
+            border-radius: 10px;
+            border: 4px solid #50B0E3;
+          } */
+        }
+      }
+      .switch-size-box{
+        justify-content: space-between;
+        .size-item{
+          text{
+            width: 200px;
+            height: 60px;
+            text-align: center;
+            line-height: 60px;
+            color: #ffffff;
+            font-size: 32px;
+            border: 1px solid #fff;
+            border-radius: 10px;
+          }
+        }
+        .disabled_btn{
+          text{
+            /* width: 200px;
+            height: 60px;
+            text-align: center;
+            line-height: 60px; */
+            color: #929292;
+            /* font-size: 32px; */
+            /* border-radius: 10px; */
+            border-color: #262626;
+            background-color: #262626;
+          }
+        }        
+        .size-num{
+          text{
+            color: #ffffff;
+            font-size: 34px;
+          }
+        }       
+      }
+      .book-catalog-box{
+        padding-top: 50px;
+        justify-content: space-between;
+        .chapter-item{
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          .icon-font{
+            color: #ffffff;
+            font-size: 50px;
+          }
+          .chapter-text{
+            color: #ffffff;
+            font-size: 26px;
+            padding-top: 10px;
+          }
+        }
+        .next-chapter-btn{
+          .icon-font{
+            transform: rotate(180deg);
+          }
+        }
+      }
+    }
+  }
+  .pay-dialog{
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, .6);
+    .pay-box{
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 100%;
+      height: 500px;
+      flex-direction: column;
+      align-items: center;
+      background-color: #fff;
+      border-radius: 30px 30px 0 0;
+      .right-close{
+        position: absolute;
+        right: 38px;
+        top: 28px;
+        .icon-font{
+          color: #B3B3B3;
+          font-size: 42px;
+        }
+      }
+      .pay-tip{
+        margin-top: 34px;
+        text{
+          font-size: 26px;
+          font-weight: 400;
+          color: #666666;
+          line-height: 36px;
+        }
+      }
+      .pay-tit{
+        margin-top: 20px;
+        text{
+          font-size: 36px;
+          font-weight: 600;
+          color: #000000;
+          line-height: 50px;
+        }
+      }
+      .pay-price{
+        margin-top: 20px;
+        text{
+          color: #EB5567;
+        }
+        .num{
+          font-size: 48px;
+          font-weight: 600;
+          line-height: 66px;
+          padding-right: 10px;
+        }
+        .coin{
+          font-size: 28px;
+          font-weight: 500;
+          line-height: 40px;
+          margin-top: 14px;
+        }
+      }
+      .pay-list{
+        margin-top: 40px;
+        text{
+          font-size: 28px;
+          font-weight: 400;
+          color: #000000;
+          line-height: 40px;
+        }
+        .balance{
+          padding-right: 10px;
+        }
+      }
+      .sure-pay-btn{
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 30px 0;
+        margin-top: 46px;
+        margin-bottom: 20px;
+        .btn{
+          width: 90%;
+          height: 100px;
+          background-color: #24AA79;
+          border-radius: 20px;
+          text{
+            color: #fff;
+            font-weight: 600;
+            text-align: center;
+            width: 100%;
+            line-height: 80px;
+          }
+        }
+      }
+    }
+  }
+
+  .create-desk-dialog{
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, .8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    .desk-tip-box{
+      width: 576px;
+      /* height: 730px; */
+      flex-direction: column;
+      align-items: center;
+      /* justify-content: center; */
+      background-color: #FFFFFF;
+      border: 4px solid #FFC31F;
+      border-radius: 20px;
+      .desk-tit{
+        width: 354px;
+        height: 76px;
+        background-image: url('../../Common/images/bg_tip.png');
+        background-size: 100%;
+        background-repeat: no-repeat;
+        text{
+          width: 354px;
+          height: 74px;
+          line-height: 50px;
+          text-align: center;
+          font-size: 38px;
+          font-weight: 800;
+          color: #823D00;
+        }
+      }
+      .desk-tip{
+        padding-top: 16px;
+        text{
+          width: 100%;
+          height: 42px;
+          font-size: 30px;
+          font-weight: 500;
+          color: #000000;
+          text-align: center;
+          line-height: 42px;
+        }
+      }
+      .desk-get-coin{
+        padding-top: 20px;
+        text{
+          height: 44px;
+          font-size: 32px;
+          font-weight: 600;
+          color: #F4132B;
+          line-height: 44px;
+          padding-left: 10px;
+        }
+      }
+      .desk-line{
+        padding-top: 16px;
+        padding-bottom: 10px;
+        image{
+          width: 100%;
+          height: auto;
+        }
+      }
+      .desk-phone{
+        padding-top: 10px;
+        image{
+          width: 160px;
+          height: 268px;
+        }
+      }
+      .desk-des{
+        flex-direction: column;
+        align-items: center;
+        padding-top: 16px;
+        text{
+          height: 44px;
+          font-size: 32px;
+          font-weight: 500;
+          color: #000000;
+          line-height: 44px;
+          span{
+            color: #EA001D;
+          }
+        }
+      }
+      .desk-btn{
+        width: 404px;
+        height: 80px;
+        background-image: url('../../Common/images/bg_btn.png');
+        background-size: 100%;
+        background-repeat: no-repeat;
+        margin-top: 26px;
+        margin-bottom: 26px;
+        text{
+          width: 100%;
+          height: 100%;
+          font-size: 32px;
+          font-weight: 500;
+          color: #FFFFFF;
+          text-align: center;
+          line-height: 80px;
+        }
+      }
+    }
+  }
+}
+
+</style>
+

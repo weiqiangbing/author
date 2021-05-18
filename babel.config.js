@@ -1,12 +1,9 @@
-module.exports = {
-  presets: [
-    '@vue/cli-plugin-babel/preset'
-  ],
-  plugins: [
-    ['import', {
-      libraryName: 'vant',
-      libraryDirectory: 'es',
-      style: true
-    }, 'vant']
-  ],
+
+module.exports = function(api) {
+  api.cache(true);
+  return {
+    "presets":["@babel/preset-env"],
+    "plugins":["@babel/plugin-transform-modules-commonjs"],
+    "babelrcRoots": [".", "node_modules"]
+  };
 }

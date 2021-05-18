@@ -1,0 +1,177 @@
+<import name="chapterlist" src="../../Components/ChapterList/index.ux"></import>
+
+<template>
+  <div class="full-page">
+    <chapterlist list="{{pageData}}" num="{{chapterNum}}" sort="{{isPlusSequence}}" pagelist="{{pageList}}" pagenum="{{pageNum}}" onpickerchange="pagelistChange" bookid="{{book_id}}" readhistory="{{readHistory}}" offset="{{offset}}" limit="{{limit}}" start_code="{{start_code}}" end_code="{{end_code}}" onlastpage="lastpage" onnextpage="nextpage" onsortchange="sortchange">
+    </chapterlist>
+  </div>
+</template>
+
+<script>
+import storage from '@system.storage'
+import $ajax from '../../Common/js/ajax.js'
+
+const uni = require('../../Common/js/storage.js');
+let chapterData = []
+let pageSize = 100;
+
+export default {
+  async onShow() {
+    // this.id = this.$page.query.id;
+    this.book_id = this.$page.query.book_id;
+    console.log('book_id', this.book_id)
+    this.getCatalogueList()
+    // let readHistory = await uni.getStorageSync('qdqx_read_history')
+    // if (readHistory && readHistory[this.id]) {
+    //   this.readHistory = readHistory[this.id];
+    // } else {
+    //   this.readHistory = []
+    // }
+
+    // if (!this.$app.$def.chapters || this.$app.$def.book_id != this.book_id) {
+    //   //获取章节
+
+    //   this.$app.$def.request.BOOK_CHAPTER_INFO({
+    //     data: {
+    //       book_id: this.book_id,
+    //       id: this.id,
+    //     }
+    //   }).then(res => {
+    //     if (res.code == 200) {
+    //       this.$app.$def.chapters = res.data.items;
+    //       chapterData = res.data.items;
+    //       this.chapterNum = chapterData.length;
+    //       this.init();
+    //     }
+    //   })
+
+    //   //请求书籍信息
+    //   this.$app.$def.request.BOOK_INFO({
+    //     data: {
+    //       book_id: this.book_id,
+    //       id: this.id,
+    //     }
+    //   }).then(res => {
+    //     if (res.code == 200) {
+    //       this.$app.$def.book_vo = res.data.book_vo;
+    //       this.$app.$def.sources = res.data.sources;
+    //       this.bookData = {
+    //         book_vo: res.data.book_vo,
+    //         sources: res.data.sources
+    //       }
+    //     }
+    //   })
+    // } else {
+
+    //   chapterData = this.$app.$def.chapters;
+    //   this.chapterNum = this.$app.$def.chapters.length;
+    //   this.bookData = {
+    //     book_vo: this.$app.$def.book_vo,
+    //     sources: this.$app.$def.sources
+    //   }
+    //   this.init();
+    // }
+  },
+  getCatalogueList(){
+    let _this = this
+    $ajax.get(`/v1/book/${_this.book_id}/simple_chapters?lang=zh-cn&limit=${_this.limit}&offset=${ _this.offset * _this.limit}`).then(res=>{
+      console.log('getCatalogueList', res)
+      this.pageData = [...res.data]
+      this.chapterNum = res.total
+      this.start_code = res.data[0].chapter_code
+      this.end_code = res.data[res.data.length-1].chapter_code
+      // _this.bookInfo = {...res}
+      // _this.book_cover = res.book_cover
+      if(_this.offset == 0){
+        let catalogueList = JSON.stringify(res.data)
+        storage.set({
+          key: 'catalogueList',
+          value: catalogueList
+        })
+      }
+    })
+  },
+  data: {
+    book_id: '',
+    id: '',
+    bookshelf: [],
+    readHistory: [],
+    isPlusSequence: true,
+    pageData: [],
+    chapterNum: 0,
+    pageNum: 0,
+    pageList: [],
+    bookData: {
+      book_vo: {},
+      sources: {}
+    },
+
+    offset: 0,
+    limit: 100,
+    start_code: 0,
+    end_code: 0,
+
+  },
+  sortchange() {
+    this.isPlusSequence = !this.isPlusSequence;
+    this.pageList.reverse();
+    this.pageNum = 0
+    this.init();
+  },
+  init() {
+    this.pageData = [];
+    if (this.pageList.length == 0) {
+      this.computedPageList();
+    }
+
+    if (this.isPlusSequence) {
+      this.pageData = chapterData.slice(this.pageNum * pageSize, (this.pageNum + 1) * pageSize)
+    } else {
+      let num = Math.ceil(chapterData.length / pageSize);
+      this.pageData = chapterData.slice((num - this.pageNum - 1) * pageSize, (num - this.pageNum) * pageSize)
+    }
+  },
+  computedPageList() {
+    let num = Math.ceil(chapterData.length / pageSize);
+    let arr = [];
+    for (let i = 0; i < num; i++) {
+      if (i == num - 1) {
+        arr.push(`${i * pageSize + 1}/${chapterData.length}`)
+      } else {
+        arr.push(`${i * pageSize + 1}/${pageSize + (pageSize * i)}`)
+      }
+    }
+    this.pageList = arr;
+  },
+  changeType() {
+    this.isPlusSequence = !this.isPlusSequence;
+    this.pageList.reverse();
+    this.pageNum = 0
+    this.init();
+  },
+  lastpage() {
+    this.offset = this.offset - 1
+    this.getCatalogueList()
+    // if (this.pageNum != 0) {
+    //   this.pagelistChange({ detail: { value: this.pageNum - 1 } })
+    // }
+  },
+  nextpage() {
+    this.offset += 1
+    this.getCatalogueList()
+    // if (this.pageNum != this.pageList.length - 1) {
+    //   this.pagelistChange({ detail: { value: this.pageNum + 1 } })
+    // }
+  },
+  pagelistChange(e) {
+    this.pageNum = parseInt(e.detail.value)
+    this.init();
+  },
+}
+
+</script>
+
+<style lang="less">
+  /* .full-page {} */
+
+</style>

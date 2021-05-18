@@ -1,0 +1,164 @@
+<template>
+  <div class="book-reader-page">
+    <!-- {{fc != '' ? '?fc=' + fc : ''}} -->
+   <web allowthirdpartycookies="true" id="web" src="{{$app.$def.h5_url}}/book/{{book_id}}/{{chapter_id}}.html{{fc ? '?fc=' + fc : '?fc=' + 0}}&desktop_status={{isCreated}}" onpagestart="emitEvt" onmessage="onMessage"></web>
+    <div style="display: none;">
+      <web allowthirdpartycookies="true" onpagestart="emitEvt2" id="web2" src="{{$app.$def.h5_user_url}}/member/loginByQuickAppCookie?uc={{cookie.uc}}&_auth_={{cookie._auth_}}&time={{time}}"></web>
+    </div>
+  </div>
+
+</template>
+
+<script>
+import router from '@system.router'
+import storage from '@system.storage'
+import shortcut from '@system.shortcut'
+import { pageEnter, pageLeave } from "../../SDK/TDSDK.min.js"
+
+export default {
+  protected: {
+    pageName: '阅读器',
+    book_id: 0,
+    chapter_id: 0,
+    fc: 0,
+    params: '',
+    cookie: {},
+    isCreated: 2,
+    arr: [],
+    time: ''
+
+  },
+  onInit() {
+    let _this = this
+    let query = this.$page.query
+    console.log('query', query)
+    if(query.book_id){
+      this.book_id = query.book_id
+      this.chapter_id = query.chapter_id
+      this.fc = query.fc
+    }
+    storage.get({
+      key: 'isCreated',
+      success: function(res){
+        console.log('isCreated', res)
+        _this.isCreated = res
+      }
+    })
+    shortcut.hasInstalled({ 
+      success: function (ret) {
+        // console.log('home_ret', ret)
+        if (ret) {
+          _this.isCreated = 1
+          storage.set({
+            key: 'isCreated',
+            value: 1
+          })
+        }else{
+          _this.isCreated = 2
+          storage.set({
+            key: 'isCreated',
+            value: 2
+          })
+        }
+      },
+      fail: function (err) {
+        console.log('err', err)
+      }
+    })
+    // this.$page.setTitleBar({text: '微言情Lite'})
+    // 页面初始化数据
+    // console.log('book_id', this.book_id)
+    // console.log('chapter_id', this.chapter_id)    
+  },
+  onMessage(msg, url){
+    // console.log('reader_mag', msg.message)
+    this.arr = msg.message.split(',')
+    // console.log('arr', this.arr)
+    this.createShortcut()
+  },
+  onShow() {
+    let _this = this
+    storage.get({
+      key: 'cookie',
+      success: function(data){
+        let cookie =  data ? JSON.parse(data) : ''
+        _this.cookie = {
+          uc: encodeURIComponent(cookie.uc),
+          _auth_: encodeURIComponent(cookie._auth_),
+        }
+        _this.time = Math.random()
+      }
+    })
+    pageEnter(_this.pageName);
+  },
+  onHide() {
+    let _this = this
+    pageLeave(_this.pageName);
+  },
+  createShortcut () {
+    console.log('createShortcut')
+    let _this = this
+    // 创建快捷方式
+    this.$app.$def.createShortcut((isTrue)=>{    
+    console.log('isTrue', isTrue)
+      if (isTrue) {
+      console.log(_this.arr.length > 0)
+        if(_this.arr.length > 0){
+          console.log('ok')
+          router.push({
+            uri: '/book/reader',
+            params: {book_id: _this.arr[1], chapter_id:  _this.arr[2]}
+          })
+        }
+      }
+    })
+  },
+  onBackPress () {
+    this.$element('web').canBack({
+      callback: function (e) {
+        router.replace({
+          uri: 'Home'
+        })
+      }.bind(this)
+    })
+    // 阻止默认行为，等待异步操作
+    return true
+  },  
+  emitEvt(url){
+    console.log('url', url.url)
+    let query = this.$page.query
+    console.log('query', query)
+  },
+  emitEvt2(url, e){
+    console.log(3333, url)
+    storage.get({
+      key: 'cookie',
+      success: function(data){
+        if(data){
+          return true
+        }else{
+          return false
+        }
+      }
+    })
+    // setTimeout(function(){
+
+    // }, 2000)
+  },
+ 
+  
+}
+</script>
+<style lang="less">
+.book-reader-page{
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: #fff;
+
+  
+}
+
+</style>
+

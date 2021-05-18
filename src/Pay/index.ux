@@ -1,0 +1,608 @@
+<template>
+  <div class="pay-page">
+    <!-- <div class="pay-title"><text>充值渠道</text></div> -->
+    <!-- <div class="recharge-way">
+      <div class="way-item wx {{payCheckedId == 0 ? 'wx-checked' : 'way-item wx'}}" @click="payChecked(0)"><div class="way-name"><text class="icon-font">&#xe610; </text><text class="text">微信支付</text></div></div>
+      <div class="way-item zfb {{payCheckedId == 1 ? 'zfb-checked' : 'way-item zfb'}}" @click="payChecked(1)"><div class="way-name"><text class="icon-font">&#xe623;</text><text class="text">支付宝支付</text></div></div>    
+    </div> -->
+    <div class="pay-title"><text>充值金额</text></div>
+    <div class="recharge-box" show="rechargeData.length > 0">
+      <!-- {{checkedId != 1 ? 'checked' : ''}} -->
+      <block for="{{(ind, item) in rechargeData}}" tid="{{item.currency}}">
+        <!-- {{checkedId == ind ? 'checked' : 'recharge-item'}} -->
+        <div class="recharge-item {{checkedId == ind ? 'checked' : 'recharge-item'}}" style="border-color: {{checkedId == ind ? theme_btn_color: '#EBEBEB'}};" @click="setInd(ind, item)">
+            <div class="currency-item" if="item.currency">
+              <!-- {{item.currency_name}} -->
+              <text>{{item.priceValue / 100}}元<span if="item.time">({{item.time}})</span></text>
+            </div>
+            <div class="coin-item">
+              <!-- {{item.coin}}{{item.coin_name}} -->
+              <text if="item.name">{{item.name}}<span class="color-red">送{{item.premium}}</span></text>
+            </div>
+            <div class="tip-item">
+              <text if="item.tip"><span class="color-red">{{item.tip}}</span></text>
+            </div>
+        </div>
+      </block>
+    </div>
+    <!-- 底部按钮 -->
+    <div class="bottom-btn" @click="showDialog">
+      <div class="btn" style="background-color: {{theme_btn_color}};"><text>立即支付：</text><text>{{payItem.priceValue / 100}}元</text></div>   
+    </div>
+    <div class="pay-way-dialog" if="{{isPaydialog}}">
+      <div class="content-dialog">
+        <div class="pay-tit" ><text>支付</text><text class="icon-font close-btn" @click="closeDialog">&#xe62b;</text></div>
+        <div class="pay-num"><text>{{payItem.priceValue / 100}}元</text></div>
+        <!-- 单选框 -->      
+        <div class="radio-list">
+          <div class="radio-item">
+            <!-- <label target="radio1"><div class="way-name"><text class="icon-font">&#xe610; </text><text class="text">微信支付</text></div></label> -->
+            <div target="radio1" class="way-name wx-way"><text class="icon-font">&#xe614;</text><text class="text">微信支付</text></div>
+            <input id="radio1" class="radio" type="radio" checked="true" name="radio" value="radio1" onchange="showChangePrompt"></input>
+          </div>
+          <!-- <div class="radio-item">
+            <div target="radio2" class="way-name zfb-way"><text class="icon-font">&#xe646;</text><text class="text">支付宝</text></div>
+            <input id="radio2" class="radio" type="radio" name="radio" value="radio2" onchange="showChangePrompt"></input>
+          </div> -->
+          <div class="sure-btn">
+            <div class="btn" style="background-color: {{theme_btn_color}};" @click="toPay"><text>确定支付</text></div>          
+          </div>
+        </div>
+      </div>     
+    
+    </div>
+  </div>
+</template>
+
+<script>
+import router from '@system.router'
+import storage from '@system.storage'
+import prompt from '@system.prompt'
+import { payData } from '../Common/payData.js'
+import wxpay from '@service.wxpay' 
+import alipay from '@service.alipay'
+import $ajax from '../Common/js/ajax.js'
+import { pageEnter, pageLeave, selfEvent } from "../SDK/TDSDK.min.js"
+
+export default {
+  // 用来接收页面跳转传递过来的参数
+  protected: {
+      book_id: ''
+  },
+  private: {
+    pageName: '充值',
+    theme_color: '',
+    theme_btn_color: '',
+    isPaydialog: false,
+    payCheckedId: 0,
+    checkedId: 0,
+    checkedClass: 'recharge-item',
+    rechargeData: payData,
+    prepayId: '',
+    order_id: '',
+    payItem: {},
+    payWay: 1, // 1微信 2支付宝
+    query: {},
+    isPay: false
+  },
+  onInit() {
+    let _this = this
+    this.$page.setTitleBar({ text: '充值' })
+    // 获取主题色
+    this.theme_color = this.$app.$def.GlobalColor.themeColorArr[_this.$app.$def.GlobalColor.theme_name].theme_color
+    this.theme_btn_color = this.$app.$def.GlobalColor.themeColorArr[_this.$app.$def.GlobalColor.theme_name].theme_btn_color
+    this.query = this.$page.query      
+    this.getRechargeData()
+  },
+  onShow() {
+    console.log('pay_onshow')
+    let _this = this
+    pageEnter(_this.pageName);
+    if(_this.isPay){
+      _this.isPay = false
+      $ajax.get('/v1/order.info?order_id=' + _this.order_id).then(res=>{
+        // console.log('order_id', res.order_status)
+        if(res.order_status == 1){        
+          prompt.showToast({
+            message: '充值成功'
+          })       
+        }else{
+          prompt.showToast({
+            message: '充值失败'
+          })
+        }
+      })
+      if(_this.query.book_id && _this.query.chapter_id){
+        $ajax.get('/v1/order.info?order_id=' + _this.order_id).then(res=>{
+          // console.log('order_id', res.order_status) 
+          if(res.order_status == 1){      
+            router.push({
+              uri: '/book/reader',
+              params: {book_id: _this.query.book_id, chapter_id: _this.query.chapter_id, fc: _this.query.fc}
+            })
+          }
+        })
+      }  
+    } 
+      
+  },
+  onHide() {
+    let _this = this
+    pageLeave(_this.pageName);
+  },
+  // 获取充值项
+  getRechargeData(){
+    // let params = {
+    //   channel_code : 'weixinh5',
+    //   currency: 'CNY'
+    // }
+    $ajax.get('/v1/charge.list2?channel_code=weixinh5&currency=CNY').then(res=>{
+      console.log('pay_charge_list', res)
+      this.rechargeData = res.data
+      this.payItem = this.rechargeData[0]
+    })
+  },
+  payChecked(ind){
+    this.payCheckedId = ind
+  },
+  setInd(ind, item){
+    this.checkedId = ind
+    this.payItem = item
+  },
+  showChangePrompt (e) {
+    let _this = this
+    if(e.value == 'radio1'){
+      _this.payWay = 1
+    }else{
+      _this.payWay = 2
+    }
+  },
+  toPay(){
+    let _this = this
+    let object = {
+      "eventId": "002", //开发者自定义事件ID，开发者自己上传
+      "label": "调起充值", //开发者自己上传label
+    }
+    selfEvent(object);
+    let params = {
+      fee: _this.payItem.priceValue,
+      product_id: _this.payItem.id,
+      type: _this.payWay
+    }
+    console.log('payway', _this.payWay)
+    if(_this.payWay == 1){
+      $ajax.post('/v1/charge.weixinh5', params).then(res=>{
+        console.log('pay1', res)
+        if(res.code == 5002){
+          prompt.showToast({
+            message: res.desc
+          })
+        }
+        let prepayId =  _this.getQueryString(res.payload, 'prepay_id')
+        _this.order_id = res.order_id
+        _this.prepayId = res.extend ? res.extend.prepay_id : prepayId
+        _this.useWxpay(res)
+        
+      })
+    }else{
+      $ajax.post('/v1/charge.alipay', params).then(res=>{
+        console.log('pay2', res)
+        if(res.code == 5002){
+          prompt.showToast({
+            message: res.desc
+          })
+        }
+        // _this.prepayId = _this.getQueryString(res.payload, 'prepay_id')
+        _this.useAlipay(res)
+      })
+    }
+  },
+  useAlipay(params){
+    let _this = this
+    console.log('ali', params.payload)
+    alipay.pay({
+      orderInfo: params.payload,
+      callback: function(ret) {
+        console.log('handling callback',ret)
+        if(_this.query.book_id && _this.query.chapter_id){
+          router.push({
+            uri: '/book/reader',
+            params: {book_id: _this.query.book_id, chapter_id: _this.query.chapter_id, fc: _this.query.fc}
+          })
+        }
+      }
+    })
+  },
+  useWxpay(params){
+    let _this = this
+    var payType = wxpay.getType();    
+    console.log('prepayId', _this.prepayId)
+    console.log('payType', payType)
+    // if (payType === 'MWEB') {
+      wxpay.pay({
+        // 微信网页支付的prepayId
+        prepayid: _this.prepayId,
+        referer: _this.$app.$def.h5_url,
+        // referer: 'https://pay.moqing.com',
+        extra: {
+          // 需要将微信返回的MWEB_URL地址配置到这里
+          mweb_url: params.payload
+        },
+        fail: function (data, code) {
+          console.log(`WX H5 PAY handling fail`, data)
+          console.log(`WX H5 PAY handling fail, code = ${code}`)
+        },
+        cancel: function (data, code) {
+          console.log('WX H5 PAY handling cancel', data)
+          console.log('WX H5 PAY handling cancel', code)
+        },
+        success: function (data, code) {
+          _this.isPay = true
+          _this.isPaydialog =  false
+          console.log('WX H5 PAY handling success', data)
+          console.log('WX H5 PAY handling success', code)
+          //H5方式下，支付成功的回调仅仅只是指将订单递交给微信，并不意味着支付已经成功完成        
+        }
+      })
+    // }
+  },
+  // 获取路径指定参数值
+  getQueryString(url, name){
+    var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)",'i');
+    var ind = url.indexOf('?')
+    var str = url.substring(ind+1)
+    var res = str.match(reg);
+    if(res[2]){
+       return res[2];
+    }else{
+      return null;
+    }
+  },
+  // 页面跳转
+  routePath (path, params) {
+    router.push({
+      uri: path,
+      params: params
+    })
+  },
+  showDialog(){
+    this.isPaydialog = true
+  },
+  closeDialog(){
+    this.isPaydialog = false
+  },
+  
+  
+}
+</script>
+<style lang="less">
+@font-face {
+  font-family: iconfont;
+  src: url("../Common/css/iconfont.ttf");
+}
+/* .icon-font{
+  font-family: iconfont;
+  font-size: 50px;
+} */
+.pay-page{
+  display: flex;
+  flex-direction: column;
+  .pay-title{
+    font-size: 30px;
+    padding: 20px 30px;
+    overflow: hidden;
+  }
+  .recharge-way{
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding-left: 30px;    
+    padding-right: 30px;
+    padding-bottom: 20px;
+    .way-item{
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 45%;
+      /* height: 100px; */
+      border-radius: 10px;      
+      .way-name{        
+        height: 100px;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+        color: #333;
+        .icon-font{
+          font-family: iconfont;
+          font-size: 50px;
+        }   
+        .text{
+          font-size: 30px;
+        }         
+      }
+    }
+  }
+  .wx{
+    border: 2px solid #03C502;
+    .text{
+      color: #03C502;
+    }
+    .icon-font{
+      color: #03C502;
+      margin-right: 10px;
+    }    
+  }
+  .zfb{
+    border: 2px solid #009DEC;
+    .text{
+      color: #009DEC;
+    }
+    .icon-font{
+      color: #009DEC;
+      margin-right: 10px;
+    }
+  }
+  .wx-checked{    
+    background-color: #03C502;
+    .way-name{
+      .icon-font{
+        color: #ffffff;
+      }
+      .text{
+        color: #ffffff;
+      }
+    }
+  }
+  .zfb-checked{
+    background-color: #009DEC;
+    .way-name{
+      .icon-font{
+        color: #ffffff;
+      }
+      .text{
+        color: #ffffff;
+      }
+    }    
+  }    
+  .recharge-box{
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    padding-left: 30px;    
+    padding-right: 30px;    
+    .recharge-item{
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 330px;
+      border: 2px solid #EBEBEB;
+      border-radius: 20px;
+      margin-bottom: 30px;      
+      /* &:active {
+        border: 2px solid #24AA79;
+      } */
+      .currency-item{
+        text{
+          font-size: 34px;
+          font-weight: bold;
+          padding-top: 15px;
+          padding-bottom: 5px;
+        }
+      }
+      .coin-item{
+        text{
+          font-size: 28px;
+          padding-top: 5px;
+          padding-bottom: 15px;
+        }
+        .color-red{
+          color: #F10B00;
+        }
+      }
+      .tip-item{
+        text{
+          font-size: 28px;
+          padding-top: 5px;
+          padding-bottom: 15px;
+        }
+        .color-red{
+          color: #F10B00;
+        }
+      }
+    }
+    .checked {
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 330px;
+      border-radius: 20px;
+      margin-bottom: 30px; 
+      border: 2px solid #24AA79;
+      /* background-color: #FFF6D5; */
+      &:active {
+        border: 2px solid #24AA79;
+        /* background-color: #FFF6D5; */
+      }
+      .currency-item{        
+        text{
+          font-size: 34px;
+          font-weight: bold;
+          padding-top: 15px;
+          padding-bottom: 5px;
+        }
+      }
+      .coin-item{
+        text{
+          font-size: 28px;
+          padding-top: 5px;
+          padding-bottom: 15px;
+        }
+        .color-red{
+          color: #F10B00;
+        }
+      }
+      .tip-item{
+        text{
+          font-size: 28px;
+          padding-top: 5px;
+          padding-bottom: 15px;
+        }
+        .color-red{
+          color: #F10B00;
+        }
+      }
+    }
+  }
+  .bottom-btn{
+    display: flex;
+    justify-content: center;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    z-index: 999;
+    width: 100%;
+    height: auto;
+    background-color: #fff;
+    padding: 30px 0;
+    .btn{
+      width: 90%;
+      height: 80px;
+      background-color: #24AA79;
+      border-radius: 50px;
+      display: flex;
+      justify-content: center;
+      text{
+        color: #fff;
+        font-weight: 600;
+        text-align: center;
+        line-height: 80px;
+      }
+    }
+  }
+  .pay-way-dialog{
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 999;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, .6);
+    .content-dialog{
+      display: flex;
+      flex-direction: column;
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      z-index: inherit;
+      width: 100%;
+      height: auto;
+      text-align: center;
+      /* align-items: center; */
+            /* justify-content: center; */
+      border-top: 1px solid #333;
+      border-radius: 20px;
+      background-color: #fff;
+      .pay-tit{      
+        justify-content: center;
+        border-bottom: 1px solid #efefef;
+        padding: 15px 0;        
+        text{
+          color: #666;
+          font-size: 32px;
+          font-weight: bold;
+        }
+        .close-btn{
+          position: absolute;
+          right: 50px;
+          top: 25px;
+          z-index: inherit;
+        }
+        .icon-font{
+          font-family: iconfont;
+          font-size: 26px;
+          color: #666;
+        } 
+      } 
+      .pay-num{
+        justify-content: center;
+        padding: 35px 0;
+        text{
+          color: #333;
+          font-size: 50px;
+          font-weight: 600;
+        }
+      }
+      .radio-list{
+        display: flex;
+        flex-direction: column;
+        .radio-item{
+          display: flex;
+          justify-content: space-between;  
+          align-items: center;    
+          padding: 5px 50px;
+          /* border-bottom: 1px solid #cccccc; */
+          .way-name{        
+            height: 100px;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+            .icon-font{
+              font-family: iconfont;
+              font-size: 50px;
+            }   
+            .text{
+              color: #333;
+              font-size: 30px;
+              font-weight: 500;
+              margin-left: 20px;
+            }                
+          }
+          .wx-way{          
+            .icon-font{
+              color: #03C502;
+            }         
+          } 
+          .zfb-way{          
+            .icon-font{
+              color: #009DEC;
+            }         
+          } 
+          .radio{
+            width: 50px;
+            height: 50px;
+          }
+        }
+        .sure-btn{
+          display: flex;
+          justify-content: center;
+          padding: 30px 0;
+          .btn{
+            width: 90%;
+            height: 80px;
+            background-color: #24AA79;
+            border-radius: 50px;
+            text{
+              color: #fff;
+              font-weight: 600;
+              text-align: center;
+              width: 100%;
+              line-height: 80px;
+            }
+          }
+        }
+      }
+    }
+  }
+
+}
+</style>
+

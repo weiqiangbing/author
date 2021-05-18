@@ -1,0 +1,773 @@
+<!-- <import name="combookinfo" src="../../Components/ComBookInfo.ux"></import> -->
+
+<template>
+  <div class="bookinfo-box">
+    <!-- <text>书籍详情</text> -->
+    <div class="bookinfo-top">
+      <list>
+        <list-item type="name">
+          <div class="book-name-box">
+            <div class="book-img-box">
+              <stack>
+                <image src="{{ book_cover.vert }}" class="book-img"></image>
+                <image show="{{ bookInfo.book_status != 2 }}" class="badge" src="../../Common/images/serialise.png"></image>
+                <image show="{{ bookInfo.book_status == 2 }}" class="badge" src="../../Common/images/end.png"></image>
+              </stack>
+            </div>
+            <div class="book-content">
+              <text class="title overflow-2">{{ bookInfo.book_name }}</text>
+              <text class="desc overflow-1" show="false">作者：{{ bookInfo.author_name?bookInfo.author_name:'' }}</text>
+              <text show="{{ bookInfo.book_words>0 }}" class="desc overflow-1">字数：{{ bookInfo.book_words && bookInfo.book_words>0 ? bookInfo.book_words : '0'}}字</text>
+              <text class="desc overflow-1">{{ bookInfo.book_status == 2 ? '已完结' : '连载中'}} {{ bookInfo.book_tags ? bookInfo.book_tags : (bookInfo.subclass_name || '') }}</text>
+              <div class="{{ getRqClass(getRenqiType(bookInfo?bookInfo | renqiData:'')) }}" show="{{ bookInfo | renqiData }}">
+                <!-- <image class="rq-icon" show="{{ getRenqiType(bookInfo?bookInfo | renqiData:'')==1 }}" src="/static/renqi_01.png"></image>
+                <image class="rq-icon" show="{{ getRenqiType(bookInfo?bookInfo | renqiData:'')==2 }}" src="/static/renqi_02.png"></image>
+                <image class="rq-icon" show="{{ getRenqiType(bookInfo?bookInfo | renqiData:'')==3 }}" src="/static/renqi_03.png"></image> -->
+                <text> 人气 {{ bookInfo.vote_number }} </text>
+                 <!-- | renqiData -->
+              </div>
+            </div>
+          </div>
+        </list-item>
+        <list-item type="desc">
+          <div class="bookinfo-pannel">
+            <div class="pannel-title">
+              <image src="../../Common/images/bookshelf_icon.png"></image>
+              <text>作品简介</text>
+            </div>
+            <div class="bookinfo-summary-content">
+              <!-- 空字符串占位使用 -->
+              <text class="overflow">{{ bookInfo.book_intro ? bookInfo.book_intro : ' ' }}</text>
+              <!-- <div class="{{ openSummary ?'type1' : 'type2' }}"></div> -->
+            </div>
+          </div>
+        </list-item>
+
+        <list-item type="chapter">
+          <div onclick="tapCataloglist" class="bookinfo-pannel">
+            <div class="pannel-title">
+              <image src="../../Common/images/catalog.png"></image>
+              <text>作品目录</text>
+            </div>
+            <div class="bookinfo-catalog-content">
+              <text class="left overflow-1">最新章节：{{ bookInfo.last_chapter_id ? bookInfo.last_chapter_title : '' }}</text>
+              <text class="right">{{ bookInfo | updateBookKeys }}</text>
+              <image src="../../Common/images/right-arow.png" class="right-img"></image>
+            </div>
+          </div>
+        </list-item>
+        <list-item type="recommond">
+          <div class="recommond-box">
+            <!-- <div class="recommond-title" show="{{ tabindex==1 }}">
+              <text onclick="tabindexchange(1)" class="type1">阅读</text>
+              <text onclick="tabindexchange(2)" class="type2">推荐</text>
+            </div> -->
+            <!-- <div class="recommond-title" show="{{ tabindex==2 }}">
+              <text onclick="tabindexchange(1)" class="type2">阅读</text>
+              <text onclick="tabindexchange(2)" class="type1">推荐</text>
+            </div> -->
+            <div class="recommond-list">
+              <div show="{{ tabindex==1 }}" class="read-box">
+                <text class="tab-name">{{ chapterMsg.name }}</text>
+                <div class="{{indent?'tab-content tab-indent':'tab-content'}}">
+                  <text for="(ind, value) in chapterMsg.sentence">{{ value }}</text>
+                </div>
+                <div class="tab-more" onclick="startMoreRead">
+                  <text>继续阅读</text>
+                  <image src="../../Common/images/moreread.png"></image>
+                </div>
+              </div>
+              <!-- <div show="{{ tabindex==2 }}" class="recommond-book">
+                <div for="{{ book in recommondList }}">
+                  <combookinfo bookInfo="{{ book }}"></combookinfo>
+                </div>
+              </div> -->
+            </div>
+          </div>
+        </list-item>
+        <!-- <list-item type="copyright">
+          <div class="copy-right-box">
+            <text class="origin" show="bookfrom&&bookfrom!=' '">来源：{{ bookfrom }}</text>
+            <text>上架时间：{{ bookInfo|creatTime }}</text>
+          </div>
+        </list-item> -->
+      </list>
+    </div>
+    <div class="bookinfo-bottom">
+      <!-- <text class="{{isInShelf?'addover':'add'}}" onclick="addbookshelf">{{ isInShelf?'已在书架':'加入书架' }}</text> -->
+      <text class="read" onclick="goReadPage">{{ readHistoryType?'继续阅读':'免费阅读' }}</text>
+    </div>
+  </div>
+</template>
+
+<script>
+const router = require('@system.router')
+const formDate = require('../../Common/js/formDate.js');
+const uni = require('../../Common/js/storage.js');
+import $ajax from '../../Common/js/ajax.js'
+import { getDecodeContent } from '../../Common/js/get_decode_content.js'
+
+let chapterData = {};
+let chapterMoreData = {};
+
+export default {
+    data: {
+    pageName: '书籍详情',
+    id: '',
+    bookId: '',
+    tabindex: 1,
+    bookfrom: '',
+    openSummary: false,
+    recommondList: [],
+    bookshelf: [],
+    readHistory: [],
+    lastChapter: {},
+    bookData: {
+      book_vo: {},
+      sources: {}
+    },
+    chapterContent: '',
+    chapterName: '正在加载中...',
+    isInShelf: false,
+    finishLoad: false,
+    indent: false,
+
+    readHistoryType: false,
+
+
+    bookInfo: {},
+    book_cover: {},
+    chapterMsg: {},
+    book_id: 15029,
+    next_chapter: 0,
+    chapter_id: 0, // 阅读记录章节id
+  },
+  async onShow() {
+    let params = {
+      book_id: this.book_id,
+      chapter_id: 0,
+
+    }
+    this.getBookInfo(params) // 获取书籍信息
+    this.getReadingNotes() // 获取阅读记录
+    this.getChapterInfo(params) // 获取第一章内容
+    this.$page.setTitleBar({ text: " " })
+    //获取书架
+    let data = await uni.getStorageSync('qdqx_bookshelf')
+    this.bookshelf = data ? data : [];
+    for (let i = 0; i < this.bookshelf.length; i++) {
+      if (this.bookshelf[i]['book_id'] == this.bookId) {
+        this.isInShelf = true;
+        break;
+      }
+    }
+  },
+  onInit() {
+    this.$page.setTitleBar({ text: this.pageName })
+  },
+  async onReady() {
+    // this.id = this.$page.query.id;
+    // this.bookId = this.$page.query.bookId;
+
+    //获取书架
+    let data = await uni.getStorageSync('qdqx_bookshelf')
+    this.bookshelf = data ? data : [];
+    for (let i = 0; i < this.bookshelf.length; i++) {
+      if (this.bookshelf[i]['book_id'] == this.bookId) {
+        this.isInShelf = true;
+        break;
+      }
+    }
+
+
+    //看阅读记录
+    let readHistory = await uni.getStorageSync('qdqx_read_history');
+
+    if (readHistory && readHistory[this.id]) {
+      this.readHistory = readHistory[this.id];
+      this.readHistoryType = true;
+    } else {
+      this.readHistory = []
+    }
+
+    //推荐书籍
+    // this.$app.$def.request.GET_BOOKINFO_RECOMMOND({
+    //   data: {
+    //     bookId: this.bookId
+    //   }
+    // }).then(res => {
+    //   if (res.code == 200) {
+    //     if (res.data.map.znList.length > 0) {
+    //       this.recommondList = res.data.map.znList
+    //     } else {
+    //       this.recommondList = res.data.map.feeList
+    //     }
+    //   }
+    // })
+
+
+    //请求书籍信息
+    // this.$app.$def.request.BOOK_INFO({
+    //   data: {
+    //     bookId: this.bookId,
+    //     id: this.id,
+    //   }
+    // }).then(res => {
+    //   if (res.code == 200) {
+    //     this.$app.$def.book_vo = res.data.book_vo;
+    //     this.$app.$def.sources = res.data.sources;
+    //     this.bookData = {
+    //       book_vo: res.data.book_vo,
+    //       sources: res.data.sources
+    //     }
+    //     this.chapterName = this.$app.$def.book_vo.contentName
+
+    //     let content = this.$app.$def.book_vo.first_chapter_content;
+
+    //     if (content.indexOf("\n　　") < 0) {
+         
+    //       this.chapterContent = content.replace(/\n/g, "\n");
+    //       this.indent = true;
+    //     } else {
+          
+    //       this.chapterContent = content;
+    //       this.indent = false;
+    //     }
+
+    //     this.finishLoad = true
+    //     this.$app.$def.request.GET_HOST({
+    //       data: {
+    //         host: res.data.book_vo.host
+    //       }
+    //     }).then(res => {
+    //       if (res.code == 200) {
+    //         this.bookfrom = res.data;
+    //       }
+    //     })
+    //   }
+    // })
+
+    //获取章节
+    // this.$app.$def.request.BOOK_CHAPTER_INFO({
+    //   data: {
+    //     bookId: this.bookId,
+    //     id: this.id,
+    //   }
+    // }).then(res => {
+    //   if (res.code == 200) {
+    //     chapterData = res.data.items[0];
+    //     chapterMoreData = res.data.items[1];
+    //     //全局数据
+    //     this.$app.$def.chapters = res.data.items;
+    //     this.$app.$def.bookId = this.bookId; //为了校验
+    //   }
+    // })
+  },
+  getBookInfo(params){
+    let _this = this
+    $ajax.get(`/v1/book.show?book_id=${params.book_id}&spread_shield=0`).then(res=>{
+      console.log('bookInfo',res)
+      _this.bookInfo = {...res}
+      _this.book_cover = res.book_cover
+
+    })
+  },
+  getChapterInfo(params){
+    let _this = this
+    console.log('details-params', params)
+
+    $ajax.get(`/v1/chapter/${params.book_id}/${params.chapter_id}?lang=zh-cn&auto_subscribe=1`).then(res=>{
+      console.log('details', res)
+      _this.next_chapter = res.next_chapter.id
+
+      let con = getDecodeContent.getConten(params.book_id, res.id,  res.content)
+      let sentence = con.split(/[(\r\n)\r\n]+/);
+      sentence.forEach((item,index)=>{
+        if(!item){
+          sentence.splice(index,1);//删除空项
+        }
+      })
+
+      let chapterData = {...res}
+      chapterData.sentence = sentence
+      console.log('reader', res)
+      console.log('chapterData', chapterData)
+      console.log('chapterMsg', _this.chapterMsg)
+
+      // 拼接每章节内容到数组中
+      _this.chapterMsg = chapterData
+      console.log('chapterMsg123', _this.chapterMsg)
+
+      // _this.$page.scrollTo({top: 0, behavior:'smooth'})
+    })
+  },
+  addbookshelf() {
+    // todo 书籍信息,加载完成后, 才允许点击
+    if (!this.finishLoad) return
+    if (!this.isInShelf) {
+      this.bookshelf.splice(0, 0, this.bookData.book_vo)
+      uni.setStorageSync('qdqx_bookshelf', this.bookshelf)
+      this.isInShelf = true;
+    }
+  },
+  startMoreRead() {
+    // this.$app.$def.goRead({
+    //   bookId: this.bookId,
+    //   id: this.id,
+    //   chapters: chapterMoreData['id']
+    // })
+    router.push({
+      uri: '/book/reader',
+      params: {
+        book_id: this.book_id,
+        chapter_id: this.next_chapter
+      }
+    })
+  },
+  // 获取用户阅读记录
+  getReadingNotes(){
+    let _this = this    
+    $ajax.get(`/v1/readlog.get?book_id=${_this.book_id}`).then(res=>{
+      if(JSON.stringify(res) == "{}"){
+        _this.readHistoryType = false
+        _this.chapter_id = 0
+      }else{
+        _this.readHistoryType = true
+        _this.chapter_id = res.chapter_id
+      }
+    })
+  },
+  goReadPage() {
+    let _this = this
+    router.push({
+      uri: '/book/reader',
+      params: {
+        book_id: _this.book_id,
+        chapter_id: _this.chapter_id
+      }
+    })
+
+    // todo 书籍信息,加载完成后, 才允许点击
+    // if (!this.finishLoad) return
+    // if (this.readHistory.length > 0) {
+    //   this.$app.$def.goRead({
+    //     bookId: this.bookId,
+    //     id: this.id,
+    //     chapters: this.readHistory[this.readHistory.length - 1]
+    //   })
+    // } else {
+    //   this.$app.$def.goRead({
+    //     bookId: this.bookId,
+    //     id: this.id,
+    //     chapters: chapterData['id']
+    //   })
+    // }
+  },
+  tapCataloglist() {
+    // todo 书籍信息,加载完成后, 才允许点击
+    // if (!this.finishLoad) return
+    router.push({
+      uri: '/book/catalogue',
+      params: {
+        book_id: this.book_id,
+        id: this.id,
+      }
+    })
+  },
+  tabindexchange(num) {
+    this.tabindex = num;
+  },
+  switchSummary() {
+    this.openSummary = !this.openSummary;
+  },
+  creatTime(item) {
+    if (Object.keys(item).length == 0) {
+      return ''
+    }
+    if (!Array.isArray(item.sources)) {
+      return ''
+    }
+    return formDate(item.sources["0"].bookSourceVO.createTime, 'yyyy-MM-dd')
+  },
+  updateBookKeys(item) {
+    if (Object.keys(item).length == 0) {
+      return ''
+    }
+    if (!item.last_chapter_id) {
+      return ''
+    }
+
+    let updateTime = item.book_update * 1000
+    console.log(updateTime)
+    let date_hour = new Date().getTime();
+    console.log(date_hour)
+    let time_slot = date_hour - updateTime;
+    let dateupdate = parseInt(time_slot / 1000 / 60 / 60 / 24)
+    let hours = parseInt(time_slot / 1000 / 60 / 60);
+
+    if (1 <= dateupdate) {
+      return dateupdate + "天前更新";
+    } else if (dateupdate < 1) {
+      if (0 == hours || hours < 1) {
+        return "最近更新";
+      }
+      return hours + "小时前更新";
+    }
+  },
+  renqiData(item) {
+    if (!Array.isArray(item.sources)) {
+      return ''
+    }
+    return item.sources["0"].bookSourceVO.readerCountDescp
+  },
+  getRqClass() {
+    // num
+    return 'rq-tag rq-tag-' + 2;
+  },
+  getRenqiType(str) {
+    if (!str) {
+      return 1;
+    }
+    if (str.indexOf('万') == -1) {
+      return 1
+    }
+    let num = parseInt(str);
+    if (num < 10) {
+      return 1
+    } else if (num < 100) {
+      return 2
+    } else {
+      return 3
+    }
+  },
+}
+
+</script>
+
+<style lang="less">
+.recommond-box {
+  width: 100%;
+  border-bottom: 24px solid #f9f9f9;
+  flex-direction: column;
+
+  .recommond-title {
+    width: 100%;
+    height: 100px;
+    border-bottom: 1px solid rgba(190, 190, 188, 0.4);
+    justify-content: center;
+
+    /* justify-content: space-around; */
+    text {
+      width: 288px;
+      text-align: center;
+      font-weight: 600;
+    }
+
+    .type1 {
+      color: #030303;
+    }
+
+    .type2 {
+      color: #b3b3b3;
+    }
+  }
+
+  .recommond-list {
+    .read-box {
+      flex-direction: column;
+      padding: 32px 40px;
+
+      .tab-name {
+        font-size: 38px;
+        color: #101010;
+      }
+
+      .tab-indent {
+        text-indent: 55px;
+      }
+
+      .tab-content {
+        padding-top: 40px;
+        font-size: 32px;
+        color: #101010;
+        line-height: 50px;
+        flex-direction: column;
+        text{
+          font-size: 30px;
+          line-height: 52px;
+        }
+      }
+
+      .tab-more {
+        padding-top: 64px;
+        align-items: center;
+        justify-content: center;
+
+        image {
+          width: 36px;
+          height: 36px;
+          margin-left: 10px;
+        }
+
+        text {
+          font-size: 24px;
+          color: #6e6f76;
+          text-align: center;
+        }
+      }
+    }
+
+    .recommond-book {
+      padding: 0;
+      padding-bottom: 32px;
+      flex-direction: column;
+    }
+  }
+}
+
+.copy-right-box {
+  flex-direction: column;
+  padding-bottom: 20px;
+
+  text {
+    font-size: 26px;
+    color: #b9b9b9;
+    padding-left: 32px;
+    line-height: 50px;
+  }
+
+  .origin {
+    padding-top: 32px;
+  }
+}
+
+.bookinfo-pannel {
+  width: 100%;
+  flex-direction: column;
+}
+
+.bookinfo-summary-content {
+  /* width: 100%; */
+  border-bottom: 24px solid #f9f9f9;
+
+  text {
+    padding: 0 32px;
+    padding-bottom: 32px;
+    line-height: 50px;
+    /* background-color: red; */
+  }
+
+  /* .type1 {
+      width: 50px;
+      justify-content: flex-end;
+      background-image: url("/static/icon_shouqi.png");
+      background-size: 96px 40px;
+      background-position: -40px;
+      background-repeat: no-repeat;
+    }
+
+    .type2 {
+      width: 50px;
+      justify-content: flex-end;
+      background-image: url("/static/icon_zhankai.png");
+      background-size: 96px 40px;
+      background-position: -40px;
+      background-repeat: no-repeat;
+    } */
+}
+
+.bookinfo-catalog-content {
+  padding: 0 32px 32px;
+  border-bottom: 24px solid #f9f9f9;
+  flex-direction: row;
+  flex-wrap: nowrap;
+
+  .left {
+    color: #616161;
+    /* flex: 1; */
+    font-size: 28px;
+    width: 70%;
+  }
+
+  .right {
+    flex: 1;
+    color: #b9b9b9;
+    text-align: right;
+    margin-right: 10px;
+    font-size: 28px;
+    flex-shrink: 0;
+  }
+
+  .right-img {
+    margin-top: 10px;
+    width: 10px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+  }
+}
+
+.pannel-title {
+  height: 110px;
+  align-items: center;
+
+  image {
+    width: 26px;
+    height: 32px;
+    margin-left: 32px;
+    margin-right: 16px;
+  }
+
+  text {
+    font-size: 32px;
+    color: #282828;
+    font-weight: 600;
+  }
+}
+
+.overflow-1 {
+  lines: 1;
+  text-overflow: ellipsis;
+}
+
+.overflow-2 {
+  lines: 2;
+  text-overflow: ellipsis;
+}
+
+.overflow-3 {
+  lines: 3;
+  text-overflow: ellipsis;
+}
+
+.overflow-4 {
+  lines: 4;
+  text-overflow: ellipsis;
+}
+
+.overflow {
+  lines: 10;
+  text-overflow: ellipsis;
+}
+
+.rq-tag {
+  height: 42px;
+  font-size: 26px;
+  line-height: 28px;
+  padding: 8px 0px 8px 0px;
+  display: flex;
+  align-items: center;
+}
+
+.rq-icon {
+  width: 52px;
+  height: 24px;
+  line-height: 28px;
+  margin-right: 6px;
+  margin-top: 4px;
+}
+
+.rq-tag-1 {
+  text {
+    color: #fe9937;
+  }
+}
+
+.rq-tag-2 {
+  text {
+    /* color: #fb3838; */
+    font-family: PingFangSC-Regular;
+    font-size: 22px;
+    color: #eb3f30;
+    text-align: right;
+  }
+}
+
+.rq-tag-3 {
+  text {
+    color: #ff2fc3;
+  }
+}
+
+.bookinfo-box {
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+
+  .bookinfo-top {
+    flex: 1;
+  }
+
+  .bookinfo-bottom {
+    height: 100px;
+    width: 100%;
+    border-top: 2px solid #f9f9f9;
+
+    .add {
+      text-align: center;
+      width: 50%;
+      height: 100%;
+      font-size: 32px;
+      color: #eb3f30;
+    }
+
+    .addover {
+      text-align: center;
+      width: 50%;
+      height: 100%;
+      font-size: 32px;
+      color: rgba(235, 63, 48, 0.3);
+    }
+
+    .read {
+      text-align: center;
+      width: 100%;
+      height: 100%;
+      color: #ffffff;
+      background-color: #eb3f30;
+    }
+  }
+}
+
+.book-name-box {
+  width: 100%;
+  height: 374px;
+  border-bottom: 24px solid #f9f9f9;
+  align-items: center;
+
+  .book-img-box {
+    width: 210px;
+    height: 268px;
+    margin-left: 32px;
+    margin-right: 32px;
+    flex-shrink: 0;
+
+    .book-img {
+      width: 100%;
+      height: 100%;
+    }
+
+    .badge {
+      width: 70px;
+      height: 40px;
+      margin-left: 10px;
+    }
+  }
+
+  .book-content {
+    height: 268px;
+    flex-direction: column;
+    justify-content: space-around;
+
+    .title {
+      font-size: 36px;
+      color: #282828;
+    }
+
+    .desc {
+      font-size: 24px;
+      color: #989898;
+    }
+  }
+}
+</style>

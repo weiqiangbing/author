@@ -1,0 +1,162 @@
+<script>
+/**
+* 应用级别的配置，供所有页面公用
+*/
+import util from './util'
+import prompt from '@system.prompt'
+import device from '@system.device'
+import $ajax from './Common/js/ajax.js'
+import storage from '@system.storage'
+import $fetch from '@system.fetch'
+import { setTDChannelId, quickInit } from "./SDK/TDSDK.min.js";
+// import { setGlobalData, getGlobalData } from './global'
+const injectRef = Object.getPrototypeOf(global) || global
+injectRef.regeneratorRuntime = require('@babel/runtime/regenerator')
+export default {
+  showMenu: util.showMenu,
+  createShortcut: util.createShortcut,
+  h5_url: 'http://fwyq.meixiangdao.com',
+  h5_user_url: 'http://user.fwyq.meixiangdao.com',
+  h5_url_test: 'http://fwyq.meixiangdao.com',
+  h5_url_test: 'http://fwyq.meixiangdao.com',
+  GlobalColor: {
+    theme_name: 'theme2',
+    themeColorArr: {
+      'theme': {
+        'theme_color': '#E7F2E9',
+        'theme_btn_color': '#68AA6E',
+      },
+      'theme2': {
+        'theme_color': '#E7F2E9',
+        'theme_btn_color': '#68AA6E',
+      }
+    }
+  },
+  data: {
+    userId: '',
+    fc: null,
+  },
+  // onCreate(){
+  //   let _this = this
+  //   storage.get({
+  //     key: 'fc',
+  //     success: function(data) {
+  //       console.log('arr_suc', data)       
+  //       _this.fc = data
+  //       console.log('app_fc_end', _this.fc)
+  //       //渠道设置
+  //       setTDChannelId(_this.fc)//channelId为字符串形式，setTDChannelId 的调用时机应当在quickInit之前
+  //       //SDK初始化
+  //       quickInit();
+  //     },
+  //     fail: function(data, code) {
+  //       console.log(`handling fail, code = ${code}`)
+  //     }
+  //   })
+  //   // console.log('app_fc', getGlobalData('$fc'))
+  // },
+  onShow() {
+    console.log('app-onshow')
+    let _this = this
+    $ajax.get('/v1/version.review').then(res=>{
+      // console.log('isResult', res.result)
+      if(!res.result){
+        device.getUserId({
+          success: function(data) {
+            // console.log(`userId: ${data.userId}`)
+            _this.userId = data.userId        
+            storage.set({
+              key: 'quick_user_id',
+              value: data.userId
+            })
+            let params = {
+              quick_user_id: _this.userId
+            }
+            _this.automaticLogin(params)
+          },
+          fail: function(data, code) {
+            console.log(`handling fail, code = ${code}`)
+          }
+        })
+      }
+    })
+  },
+  automaticLogin(params) {
+    $ajax.post('/v1/quickapp.user.login', params).then(res=>{
+      // console.log('res123', res)
+      storage.set({
+        key: 'token',
+        value: res.token
+      })
+      storage.set({
+        key: 'cookie',
+        value: res.cookie
+      })
+      storage.set({
+        key: 'user',
+        value: res.user
+      })
+      console.log('$fetch')
+      // let url = 'http://user.litong.quick.xdyq.com'
+      // let url = 'http://user.fwyq.meixiangdao.com'
+      // $fetch.fetch({
+      //   url: url + '/member/loginByQuickAppCookie',
+      //   method: 'post',
+      //   responseType: 'text',
+      //   data: res.cookie,
+      //   header: {
+      //     "Content-Type": "application/x-www-form-urlencoded",
+      //   },
+      //   success: function(response) {
+      //     console.log('res_cookie', response)
+      //     // console.log(`the status code of the response: ${response.code}`)
+      //     // console.log(`the data of the response: ${response}`)
+      //     // console.log(
+      //     //   `the headers of the response: ${JSON.stringify(response.headers)}`
+      //     // )
+      //   },
+      //   fail: function(err){
+      //     console.log('err', err)
+
+      //   }
+      // })  
+    })
+  },
+  onDestroy(){
+    console.log('destory')
+    let _this = this
+    console.log('end')
+    // prompt.showDialog({
+    //   title: '若看小说',
+    //   message: '确定退出应用吗？',
+    //   buttons: [
+    //     {
+    //       text: '确定',
+    //       color: '#3ABBFE'
+    //     },
+    //     {
+    //       text: '取消',
+    //       color: '#3ABBFE'
+    //     }
+    //   ],
+    //   success: function(obj) {
+    //     if(obj.index){
+    //       return true
+    //     }else{
+    //       // return false
+    //       // _this.$page.finish()
+    //       _this.$app.exit()
+    //     }
+    //   },
+    //   cancel: function(data) {
+    //     console.log('handling cancel', data)
+    //   },
+    //   fail: function(data, code) {
+    //     console.log(`handling fail, data = ${data}`)
+    //     console.log(`handling fail, code = ${code}`)
+    //   }
+    // })
+    // return true
+  }
+}
+</script>

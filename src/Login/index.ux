@@ -1,0 +1,76 @@
+<template>
+  <div class="test-page">
+      <div onclick="postMsg" class="btn"><text>字体变蓝</text></div>      
+
+
+  </div>
+</template>
+
+<script>
+import router from '@system.router'
+import { tabsData } from '../Common/data.js'
+import shortcut from '@system.shortcut'
+import storage from '@system.storage'
+// import Channel from './channel.js'
+
+export default {
+  channel: null,
+  data() {
+    return {
+      
+    }  
+  },	
+  onInit() {
+//     this.channel = new Channel(this, 'web') //通道监听    
+//     this.channel.on('type1', function (data) { //处理收到的数据
+//     console.log('data', data)
+
+//     })
+//     //发送信息	
+//     this.channel.sendMsg('type1', {
+//       //数据
+//       book_id: 123456,
+//       chapter_id: 888888
+//     })
+
+  },	
+  postMsg(){
+    console.log('postMsg')
+    // this.$element('web').postMessage({book_id: 123456})
+  },
+  onShow() {
+   console.log('onShow')
+
+  },
+  onInit() {
+   console.log('onInit')
+    
+  },
+  // 页面跳转
+  routePath (path, params) {
+    router.push({
+      uri: path,
+      params: params
+    })
+  },
+  
+  
+}
+</script>
+<style lang="less">
+.test-page{
+  flex: 1;
+  flex-direction: column;
+  background-color: #fff;
+  .web{
+    flex: 1;
+  }
+  .btn{
+    position: fixed;
+    right: 0;
+    top: 50px;
+  }
+  
+}
+</style>
+

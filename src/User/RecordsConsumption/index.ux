@@ -1,0 +1,179 @@
+<template>
+<div class="record-wrap">
+    <!-- <list class="tutorial-page" onscrollbottom="loadMoreData"> -->
+        <block for="(ind, item) in recordList" tid="ind" if="recordList.length > 0">
+            <!-- <list-item type="product" class="content-item"> -->
+                <div class="consumption-item" @click="routePath('/user/ChapterConsum', {book_id: item.book_id})">
+                    <div class="consumption-item-row">
+                        <div class="consumption-item-title"><text>{{costType[item.cost_type]}}</text></div>
+                        <div class="consumption-item-price">
+                            <div class="consumption-item-price-number"><text>-{{item.coin + item.premium}}</text><text>书币/书券</text></div>
+                            <!-- <div class="consumption-item-price-number" if="item.premium"><text>/-{{item.premium}}</text><text>书券</text></div> -->
+                        </div>
+                    </div>
+                    <div class="consumption-item-row">
+                        <div class="consumption-item-tip"><text>{{item.book_name}}</text></div>
+                        <div class="consumption-item-tip"><text>{{item.newest_cost_time}}</text></div>
+                        <!-- <div class="consumption-item-price">
+                            <div class="consumption-item-price-number"><text>+{{item.order_premium}}</text></div><text>书券</text>
+                        </div> -->
+                        <!-- <div class="consumption-item-tip"><text>+{{item.order_premium}}</text></div><text>书券</text></div> -->
+                    </div>
+                    <!-- 定位的已使用和书币 -->
+                    <!-- <div class="consumption-item-used"></div>
+                    <div class="consumption-item-used-money"><div class="consumption-item-used-money-number"><text>+39</text></div><text>书币</text></div> -->
+                </div>
+            <!-- </list-item> -->
+        </block>
+        <div class="no-data" else>
+            <text>暂无消费记录</text>
+        </div>
+    <!-- </list> -->
+</div>
+</template>
+<script>
+import prompt from '@system.prompt'
+import router from '@system.router'
+import $ajax from '../../Common/js/ajax.js'
+import comm from '../../Common/js/comm.js'
+import { pageEnter, pageLeave } from "../../SDK/TDSDK.min.js"
+
+export default {
+    // 用来接收页面跳转传递过来的参数
+    protected: {
+        book_id: ''
+    },
+    private: {
+        pageName: '消费记录',
+        costType: {
+            1: '订阅',
+            2: '打赏',
+            3: '包月',
+            4: '单本购买',
+            5: '道具'
+        },
+        // token: '',
+        recordList: [
+        ],
+        page: 1,
+        offset: 0,
+        limit: 10
+       
+    },
+    onInit() {
+        // let _this = this
+        // storage.get({
+        //     key: 'token',
+        //     success: function(data){
+        //         console.log('token', data)
+        //         _this.token = data
+        //     }
+        // })
+        this.$page.setTitleBar({ text: '消费记录' })
+        this.getRecordList()
+    },
+    onShow() {
+        let _this = this
+        pageEnter(_this.pageName);
+    },
+    onHide() {
+        let _this = this
+        pageLeave(_this.pageName);
+    },
+    getRecordList() {
+        let _this = this
+        // this.offset = (this.page - 1) * 10
+        $ajax.get('/v1/user.cost_list?offset=' + _this.offset + '&limit=' + _this.limit).then(res=>{
+            // console.log('recordlist', res)
+            this.recordList = res.code ? [] : res
+            // this.recordList = res.length > 0 ? [] : this.recordList.concat(res)
+            // let lastTime = comm.getDayAndTime(this.surplusTime - this.dateNow)
+            // console.log('recordlist', this.recordList)
+        })
+    },
+    loadMoreData(){
+        let _this = this
+        setTimeout(function(){
+            prompt.showToast({
+                message: '加载中...'
+            })
+        }, 1000)
+        _this.page += 1
+        _this.getRecordList()
+        
+    },
+    getTime(val){
+        return comm.getTimeStr(val * 1000)
+    },
+    // 页面跳转
+    routePath (path, params) {
+        router.push({
+            uri: path,
+            params: params
+        })
+    },
+    
+
+    
+}
+</script>
+<style lang="less">
+.record-wrap{
+    display: flex;
+    flex-direction: column;
+    background-color: #F2F2F2;
+    .consumption-item{
+        width: 100%;
+        height: 160px;
+        display: flex;
+        /* flex: 1; */
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 20px 30px;
+        box-sizing: border-box;
+        position: relative;
+        background-color: #fff;
+        margin-bottom: 20px;
+        .consumption-item-row{
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0; 
+            .consumption-item-title{
+                font-size: 14px;
+                color: #333333;
+            }
+            .consumption-item-price{
+                display: flex;
+                align-items: center;
+                font-size: 14px;
+                color: #333333;
+                .consumption-item-price-number{
+                    font-size: 18px;
+                    font-weight: bold;
+                    color: #e2356e;
+                }
+            }
+            .consumption-item-tip{
+                font-size: 14px;
+                color: #999999;
+            }
+        }
+    }
+    .no-data{
+        flex: 1;
+        background-color: #ffffff;
+        text{
+            width: 100%;
+            height: 100px;
+            line-height: 100px;
+            text-align: center;
+            font-size: 30px;
+            color: #666;
+        }
+    }
+
+}
+</style>
+
+

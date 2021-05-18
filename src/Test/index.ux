@@ -1,0 +1,114 @@
+<template>
+  <div class="test-page">
+      <div onclick="postMsg" class="btn"><text>test</text></div>
+
+      <web allowthirdpartycookies="true" id="web" src="{{url}}" @message="onMessage" trustedurl="{{trust}}" onpagestart="emitEvt" ontitlereceive="titleEvt"></web>
+      <!-- <web allowthirdpartycookies="true" class="web" id="web" src="{{url}}" trustedurl="{{trust}}" onpagestart="pageStart" onpagefinish="pageFinish" ontitlereceive="titleEvt" onerror="errorEvt" @message="{{onMessage}}" @progress="{{progressEvt}}" allowthirdpartycookies="{{allow}}"></web> -->
+
+
+  </div>
+</template>
+
+<script>
+import router from '@system.router'
+import shortcut from '@system.shortcut'
+import storage from '@system.storage'
+
+export default {
+  channel: null,
+  private: {
+    allow: false,
+    url: 'http://192.168.1.172:8080/?v1=' + Math.random(),
+    trust: [
+      'http://192.168.1.172:8080/',
+      /^http:\/\/192.168.1.172:8080/
+      // /^http:\/\/.*page_two\.html$/
+    ]
+    
+  },	
+  onInit() {
+//     this.channel = new Channel(this, 'web') //通道监听    
+//     this.channel.on('type1', function (data) { //处理收到的数据
+//     console.log('data', data)
+
+//     })
+//     //发送信息	
+//     this.channel.sendMsg('type1', {
+//       //数据
+//       book_id: 123456,
+//       chapter_id: 888888
+//     })
+
+  },	
+  emitEvt(url){
+    console.log('evt_url', url)
+    this.$element('web').postMessage({'message': '123456'})
+
+  },
+  onMessage(param, url) {
+    console.log('param', param)
+    console.log('url0', url)
+    // this.$element('web').postMessage()
+    // this.channel.onMsg(param)
+    this.postMsg()
+  },
+  postMsg(){
+    console.log('postMsg')
+    this.$element('web').postMessage({book_id: '123456'})
+  },
+  onShow() {
+   console.log('onShow')
+
+  },
+  onInit() {
+   console.log('onInit')
+    
+  },
+  pageStart(url){
+    console.log('url1', url)   
+  },
+  pageFinish(msg, url){
+    console.log('msg', msg)
+    console.log('url2', url)
+  },
+  titleEvt(e){
+    // 设置标题栏
+    this.$page.setTitleBar({ text: e.title })
+  },
+  errorEvt(err){
+    console.log('err', err)
+  },
+  progressEvt(pro){
+    console.log('progress', pro)
+  },
+  sizeBlue(){
+
+  },
+  // 页面跳转
+  routePath (path, params) {
+    router.push({
+      uri: path,
+      params: params
+    })
+  },
+  
+  
+}
+</script>
+<style lang="less">
+.test-page{
+  flex: 1;
+  flex-direction: column;
+  background-color: #fff;
+  .web{
+    flex: 1;
+  }
+  .btn{
+    position: fixed;
+    right: 0;
+    top: 50px;
+  }
+  
+}
+</style>
+

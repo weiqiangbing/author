@@ -1,0 +1,238 @@
+{
+  "package": "com.xinmo.quickapp",
+  "name": "若看小说",
+  "versionName": "1.1.1",
+  "versionCode": "12",
+  "minPlatformVersion": "1070",
+  "icon": "/Common/logo.png",
+  "features": [
+    {
+      "name": "system.prompt"
+    },
+    {
+      "name": "system.router"
+    },
+    {
+      "name": "system.shortcut"
+    },
+    {
+      "name": "system.webview"
+    },
+    {
+      "name": "system.storage"
+    },
+    {
+      "name": "system.fetch"
+    },
+    {
+      "name": "service.account"
+    },
+    {
+      "name": "service.share",
+      "params": {
+        "appSign": "MIIEPDCCAySgAwIBAgIJAMIMiAtNYduoMA0GCSqGSIb3DQEBCwUAMIGyMQswCQYDVQQGEwJaSDEQMA4GA1UECAwHQmVpSmluZzERMA8GA1UEBwwIQmVpIGppbmcxOTA3BgNVBAoMMMKzwqTDicKzw5DDgsOUw4TDjsOEwrvCr8K0wqvDg8K9w5PDkMOPw57CucKrw4vCvjETMBEGA1UECwwKT3BlcmF0aW9uczEPMA0GA1UEAwwGcnVva2FuMR0wGwYJKoZIhvcNAQkBFg5oamxAcnVva2FuLmNvbTAeFw0yMDA3MDkxMjUxNDVaFw0zMDA3MDcxMjUxNDVaMIGyMQswCQYDVQQGEwJaSDEQMA4GA1UECAwHQmVpSmluZzERMA8GA1UEBwwIQmVpIGppbmcxOTA3BgNVBAoMMMKzwqTDicKzw5DDgsOUw4TDjsOEwrvCr8K0wqvDg8K9w5PDkMOPw57CucKrw4vCvjETMBEGA1UECwwKT3BlcmF0aW9uczEPMA0GA1UEAwwGcnVva2FuMR0wGwYJKoZIhvcNAQkBFg5oamxAcnVva2FuLmNvbTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKub9GuGh7RxmclLjVMQRIHvosWTerzoY/NTAqz/YO6TRO2dWWCXHrd3t3s2+tnCl5Q3oddmuCwDL8vkNrMvfq5iEQm+iBr+r+zbEImltFWeDD3lXhgq5tGBVSbBt2xih+JvtY19eU2iW963+4enTmV0ClC8BOuTEHs9wlquhEFasbIQ8uRAPpLQNZPriuKdY0YboNWagkkGY+YizhbukAYBnPFu+s2yVpUCp0aKAlbd0687h4pzAjE+E/GBYDBsSM+Z6YWVKrB1gqYJVdPKTqOY+suDfTOC27W09n6LKRh40NF1f0XtOl+l1irM494VAV4I+McSzhqS0WV4sHIaTvsCAwEAAaNTMFEwHQYDVR0OBBYEFC3mH2r1xNgHyHb/khAg/ORdKYxqMB8GA1UdIwQYMBaAFC3mH2r1xNgHyHb/khAg/ORdKYxqMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEBAEsMdmy9LJd7I0jYThE0WafITpBShVdvrIHzvGGxi8SID72IUcHmYE3EXhkpCUuhOReYliqIc+tObr6qKhX7EAJiD7kuPRBBJMGSisVaCzn6PBI4/IGe9X4GTqaHEkbaENjLebMlDHgUjagtMdPh0dp4PwNbJV4Vd7AVBdOo78BTxVt9J/rbeMiPL+2TJDaCmqd6erSS1xex5gVE3v+x8CDQVOHe5jGJ7ol/pl6Lz4gS4avLF76aVdsGDilsazO/6vxU/e9YKAXp5QeOB4At5GPVMwp8x1DUtM7GJfYedOm16BCf2mdQ3/g7sOGztLznYI8npL8pD9ymAOeXVW1xy38=",
+        "wxKey": "wx5b30d58935e8c19a"
+      }
+    },
+    {
+      "name": "service.wxpay",
+      "params": {
+        "url": "http://fwyq.meixiangdao.com"
+      }
+    },
+    {
+      "name": "service.alipay"
+    },
+    {
+      "name": "service.qqaccount",
+      "params": {
+        "appId": "your app id",
+        "clientId": "you client id"
+      }
+    },
+    {
+      "name": "service.wxaccount",
+      "params": {
+        "appId": "your app id"
+      }
+    }
+  ],
+  "permissions": [
+    {
+      "origin": "*"
+    }
+  ],
+  "config": {
+    "logLevel": "debug",
+    "designWidth": "750",
+    "data": {
+      "themeArr": [
+        {
+          "themeMode": "1",
+          "bg_color": "#333"
+        },
+        {
+          "themeMode": "2",
+          "bg_color": "#fff"
+        },
+        {
+          "themeMode": "3",
+          "bg_color": "pink"
+        }
+      ]
+    }
+  },
+  "router": {
+    "entry": "Welfare",
+    "pages": {
+      "Home": {
+        "component": "index",
+        "path": "/home"
+      },
+      "BookShelf": {
+        "component": "index",
+        "path": "/bookshelf"
+      },
+      "All": {
+        "component": "index",
+        "path": "/all"
+      },
+      "Welfare": {
+        "component": "index",
+        "path": "/welfare"
+      },
+      "User": {
+        "component": "index",
+        "path": "/user"
+      },
+      "User/RechargeRecord": {
+        "component": "index",
+        "path": "/user/rechargerecord"
+      },
+      "User/RecordsConsumption": {
+        "component": "index",
+        "path": "/user/recordsConsumption"
+      },
+      "User/ChapterConsum": {
+        "component": "index",
+        "path": "/user/ChapterConsum"
+      },
+      "User/GiftRecord": {
+        "component": "index",
+        "path": "/user/giftrecord"
+      },
+      "User/Login": {
+        "component": "index",
+        "path": "/user/login"
+      },
+      "User/Signin": {
+        "component": "index",
+        "path": "/user/signin"
+      },
+      "User/UserAgreement": {
+        "component": "index",
+        "path": "/user/useragree"
+      },
+      "User/PrivacyClause": {
+        "component": "index",
+        "path": "/user/privacyclause"
+      },
+      "My": {
+        "component": "index",
+        "path": "/my"
+      },
+      "Book/Reader": {
+        "component": "index",
+        "path": "/book/reader"
+      },
+      "Book/BookDetails": {
+        "component": "index",
+        "path": "/book/details"
+      },
+      "Book/BookCatalogue": {
+        "component": "index",
+        "path": "/book/catalogue"
+      },
+      "Book/Subscribe": {
+        "component": "index",
+        "path": "/book/subscribe"
+      },
+      "Pay": {
+        "component": "index",
+        "path": "/pay"
+      },
+      "Test": {
+        "component": "index",
+        "path": "/test"
+      },
+      "Error": {
+        "component": "index",
+        "path": "/error"
+      },
+      "welfare": {
+        "component": "index"
+      }
+    },
+    "errorPage": "Error",
+    "widgets": {
+      "CardDemo": {
+        "name": "CardDemo",
+        "description": "快应用卡片展示",
+        "component": "index",
+        "path": "/CardDemo",
+        "minPlatformVersion": 1032,
+        "targetManufactorys": [
+          "vivo"
+        ],
+        "features": []
+      }
+    }
+  },
+  "subpackages": [
+    {
+      "name": "bs",
+      "resource": "BookShelf"
+    },
+    {
+      "name": "all",
+      "resource": "All"
+    }
+  ],
+  "display": {
+    "titleBar": true,
+    "titleBarBackgroundColor": "#f2f2f2",
+    "titleBarTextColor": "#414141",
+    "titleBarText": "若看小说",
+    "pages": {
+      "Home": {
+        "titleBarText": "若看小说",
+        "menu": false
+      },
+      "BookShelf": {
+        "titleBarText": "书架",
+        "menu": false
+      },
+      "All": {
+        "titleBarText": "书库",
+        "menu": false
+      },
+      "My": {
+        "titleBarText": "用户中心",
+        "menu": false
+      },
+      "Book/Reader": {
+        "titleBarText": "阅读器",
+        "titleBar": false,
+        "statusBarTextStyle ": "auto",
+        "statusBarBackgroundOpacity": 1,
+        "statusBarImmersive": true
+      },
+      "Error": {
+        "titleBarText": "error"
+      },
+      "welfare": {
+        "titleBarText": "签到领福利"
+      }
+    }
+  }
+}

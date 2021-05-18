@@ -1,0 +1,738 @@
+<template>
+  <div class="user-page">
+    <!-- <div class="web-box">
+      <web allowthirdpartycookies="true" id="web" src="{{$app.$def.h5_url}}/member/my.html" onpagestart="emitEvt"  ontitlereceive="titleEvt"></web>
+    </div>     -->
+    <div class="user-bg" style="background-color: {{theme_color}};">    
+      <div class="user-box">
+        <div class="user-cover"><image src="../Common/head.png"></image></div>
+        <div class="user-msg" if="!isLogin">
+          <div class="user-name"><text class="text-login" @click="loginRoutePath('User/Login')">点击登录</text>
+          <!-- <text class="user-id">登录更安全，可同步书籍，领取奖励</text> -->
+          </div>
+          <div class="msg-tip"><text>登录更安全，可同步书籍，领取奖励</text></div>
+        </div>
+        <div class="user-msg" elif="{{userData.user_mobile == '' && isLogin}}">
+          <div class="user-name"><text class="text-login" @click="routePath('User/Login')">绑定手机</text>
+          <text class="user-id">(ID:{{userData.user_id}})</text>
+          </div>
+          <div class="msg-tip"><text>登录更安全，可同步书籍，领取奖励</text></div>
+        </div>
+        <div class="mobile-user-msg" else>
+          <div class="user-mobile">
+            <div class="user-mobiles"><text>{{userData.user_mobile}}</text></div>
+            <!-- <div class="switch-users" @click="routePath('User/Login')"><text>切换用户</text><text class="icon-font">&#xe601;</text></div> -->
+          </div>
+          <div class="user-id"><text>ID:{{userData.user_id}}</text></div>
+        </div>
+      </div>
+      <div class="my-account">
+        <div class="my-account-left">
+          <div class="account-icon"><text class="icon-font" style="color: {{theme_btn_color}};">&#xe640;</text></div>
+          <div class="my-acc-name"><text>我的账户</text></div>
+          <div class="my-acc-num"><text class="balance">余额:</text><text class="coin" style="color: {{theme_btn_color}};">{{userData.user_coin?userData.user_coin:0}}书币/{{userData.user_premium?userData.user_premium:0}}书券</text></div>
+        </div>
+        <div class="my-account-right" @click="loginRoutePath('Pay')"><text style="background-color: {{theme_btn_color}};">充值</text></div>
+      </div>
+    </div>
+    <div class="menu-list">
+      <div class="menu-item" @click="loginRoutePath('/user/rechargerecord')">        
+        <!-- <a href="User/RechargeRecord"></a> -->
+        <div class="menu-left"><text class="icon-font">&#xe647;</text><text>充值记录</text></div>
+        <div class="menu-right"><text class="icon-font">&#xe64a;</text></div>
+      </div> 
+      <div class="menu-item" @click="loginRoutePath('/user/recordsConsumption')">
+        <div class="menu-left"><text class="icon-font">&#xe8f4;</text><text>消费记录</text></div>
+        <div class="menu-right"><text class="icon-font">&#xe64a;</text></div>
+      </div>           
+      <div class="menu-item" @click="loginRoutePath('/user/giftrecord')">
+        <div class="menu-left"><text class="icon-font">&#xe60c;</text><text>赠送记录</text></div>
+        <div class="menu-right"><text class="icon-font">&#xe64a;</text></div>
+      </div>
+      <div class="menu-item" @click="loginRoutePath('/user/signin')">
+        <div class="menu-left"><text class="icon-font">&#xe74f;</text><text>签到</text></div>
+        <div class="menu-right"><text class="icon-font">&#xe64a;</text></div>
+      </div>
+      <div class="menu-item" @click="routePath('/bookshelf')">
+        <div class="menu-left"><text class="icon-font">&#xe617;</text><text>最近阅读</text></div>
+        <div class="menu-right"><text class="icon-font">&#xe64a;</text></div>
+      </div>
+      <div class="menu-item" @click="loginRoutePath('/bookshelf')">
+        <div class="menu-left"><text class="icon-font">&#xe619;</text><text>我的书架</text></div>
+        <div class="menu-right"><text class="icon-font">&#xe64a;</text></div>
+      </div>
+      <div class="menu-item" @click="logOut">
+        <div class="menu-left"><text class="icon-font">&#xe632;</text><text>退出登录</text></div>
+        <div class="menu-right"><text class="icon-font">&#xe64a;</text></div>
+      </div>
+    </div>
+    <!-- if="tabIsShow" -->
+    <div class="tab-box">    
+      <block for="{{tabItemList}}">
+        <div class="tab-items" onclick="setIndex($idx)">
+          <block if="{{$idx==flag}}">
+            <image class="tab-img" src="{{dataMap[$item].selectedIcon}}"></image>
+            <text class="tab-text" style="color: #0faeff;">{{dataMap[$item].name}}</text>
+          </block>
+          <block else>
+            <image class="tab-img" src="{{dataMap[$item].icon}}"></image>
+            <text class="tab-text">{{dataMap[$item].name}}</text>
+          </block>
+        </div>
+      </block>
+    </div>
+    <div class="create-desktop-icon-dialog" if="created_dialog">      
+      <div class="desktop-icon-box">
+        <div class="close-circle" onclick="colseDialog"><image src="{{close_url}}"></image></div>
+        <div class="phone"><image src="{{phone_url}}"></image></div>
+        <div class="creat-desktop-tip"><text class="tip-text">添加成功，下次可直接</text><text class="origin-color">从手机桌面打开【若看小说】</text></div>
+        <div class="close-btn" onclick="colseDialog"><text class="iknow">我知道了</text></div>
+      </div>
+    </div>
+    <!-- 创建快捷方式 -->
+     <!-- && tabIsShow -->
+    <input if="!isCreated" class="create-shortcut" type="button" onclick="createShortcut" value="保存到手机，方便下次看书" />
+
+    <div style="display: none;">
+      <web allowthirdpartycookies="true" onpagestart="emitEvt2" id="web2" src="{{$app.$def.h5_user_url}}/member/loginByQuickAppCookie?uc={{cookie.uc}}&_auth_={{cookie._auth_}}&time={{time}}"></web>
+    </div>
+  </div>
+</template>
+<script>
+import router from '@system.router'
+import prompt from '@system.prompt'
+import { tabsData } from '../Common/data.js'
+import shortcut from '@system.shortcut'
+import storage from '@system.storage'
+import $ajax from '../Common/js/ajax.js'
+import { pageEnter, pageLeave } from "../SDK/TDSDK.min.js"
+import comm from '../Common/js/comm.js'
+
+export default {
+  data() {
+    return {
+      pageName: '我的',
+      theme_color: '',
+      theme_btn_color: '',
+      flag: 3,
+      tabIsShow: false,
+      isCreated: false,
+      created_dialog: false,
+      tabItemList: [],
+      dataMap: tabsData,
+      phone_url: require('../common/phone.png'),
+      close_url: require('../common/close.png'),
+      url: '',
+      userData: {},
+      isLogin: true,
+      cookie: {},
+      time: '',
+
+
+
+    }    
+  },
+  onInit() {
+    let _this = this
+    let querys = this.$page.query
+    // 获取主题色
+    this.theme_color = this.$app.$def.GlobalColor.themeColorArr[_this.$app.$def.GlobalColor.theme_name].theme_color
+    this.theme_btn_color = this.$app.$def.GlobalColor.themeColorArr[_this.$app.$def.GlobalColor.theme_name].theme_btn_color
+
+    comm.setChannelId(querys.fc)
+    this.$page.setTitleBar({ text: this.pageName })
+    console.log('dataMap', this.dataMap)
+    // 初始化tabItemList
+    this.tabItemList = [].concat(Object.keys(this.dataMap))
+    shortcut.hasInstalled({
+      success: function (ret) {
+        if (ret) {
+          _this.isCreated = true
+        }else{
+          _this.isCreated = false
+        }
+      },
+      fail: function (err) {
+        console.log('err', err)
+      }
+    })
+
+
+    // 判断用户打开应用大于7天将创建快捷键隐藏
+    let time = new Date().getTime()
+    // storage.clear()
+    storage.get({
+      key: 'openTime',
+      success: function(data) {
+        let old_time = data ? JSON.parse(data) : 0
+        if(data){
+          let days = (time - old_time) / (1000*60*60*24)
+          // console.log('days', days)
+          if(days > 7){
+            _this.isCreated = true
+          }          
+        }       
+      },
+      fail: function(data, code) {
+        console.log(`handling fail, code = ${code}`)
+      }
+    })
+  },
+  onShow() {
+    let _this = this
+    let query = this.$page.query
+    storage.get({
+      key: 'cookie',
+      success: function(data){
+        let cookie =  data ? JSON.parse(data) : ''
+        // console.log('home_cookie', cookie)
+        _this.cookie = {
+          uc: encodeURIComponent(cookie.uc),
+          _auth_: encodeURIComponent(cookie._auth_),
+        }
+        _this.time = Math.random()
+      }
+    })
+    // let src = this.$element('web')._attr.src
+    // this.emitEvt({url: src})
+    console.log('url', _this.url)
+    this.emitEvt({url: _this.url})    
+    storage.get({
+      key: 'quick_user_id',
+      success: function(data){
+        let params = {
+          quick_user_id: data
+        }
+        _this.getUserInfo(params)
+      }
+    })
+    pageEnter(_this.pageName);
+  },
+  onHide() {
+    let _this = this
+    pageLeave(_this.pageName);
+  },
+  getUserInfo(params) {
+    let _this = this
+    // storage.get({
+    //   key: 'user',
+    //   success: function(data){
+    //     console.log('user_data', data)
+    //     _this.userData = data ? JSON.parse(data) : {}
+    //     console.log('user_mobile', _this.userData.user_mobile == '')
+    //     if(_this.userData.user_mobile == ''){
+          $ajax.get('/v1/user.info?v1=' + Math.random()).then(res=>{
+            console.log('res', res)
+            // let user = res.user ? JSON.parse(res.user) : {}
+            _this.userData = res
+            _this.isLogin = true
+            if(res.code == 5002 || res.code == 5001){
+              console.log(5002)
+              _this.isLogin = false
+            }
+          })
+    //     }
+    //   }
+    // })
+    
+  },
+  createShortcut () {
+    let _this = this
+    // 创建快捷方式
+    this.$app.$def.createShortcut((isTrue)=>{
+      if (isTrue) {
+        _this.isCreated = true
+        _this.created_dialog = true
+      }else{
+        _this.isCreated = false
+      }
+    })
+  },
+  colseDialog(){
+    this.created_dialog = false
+  },
+  onBackPress () {
+    // this.$element('web').canBack({
+    //   callback: function (e) {
+    //     if (e) {
+    //       // 加载历史列表中的上一个 URL
+    //       this.$element('web').back()
+    //     } else {
+    //       router.replace({
+    //         uri: 'Home'
+    //       })
+    //     }
+    //   }.bind(this)
+    // })
+    router.replace({
+      uri: 'Home'
+    })
+    // 阻止默认行为，等待异步操作
+    return true
+  },
+  emitEvt(url, e){
+    // this.$dispatch('dispathEvt', {
+    //   url: url.url
+    // })
+    let evt = url.url
+    let _this = this
+    _this.tabIsShow = false
+    _this.url = url.url
+    let value = evt.substring(evt.indexOf('.com')+4)
+    // console.log('a', value)
+    if(value.indexOf('/member/bookshelf') != -1 || value == '/' || value.indexOf('/?') != -1  || value == '/all' || value == '/all.html' || value == '/member/my' || value == '/member/my.html' || value == '/member/login' || value == '/member/login.html'){
+      _this.tabIsShow = true
+    }
+
+    if(value == '/' || value.indexOf('/?') != -1 ){
+      _this.flag = 1
+    }else if(value.indexOf('/member/bookshelf') != -1){
+      _this.flag = 0
+    }else if(value.indexOf('/member/my') != -1){
+      _this.flag = 3
+    }
+  },
+  titleEvt(e){
+    // 设置标题栏
+    this.$page.setTitleBar({ text: e.title })
+  },
+  // 退出登录
+  logOut(){
+    let _this = this
+    this.clearToken()
+    this.clearCookie()
+    storage.get({
+      key: 'quick_user_id',
+      success: function(data){
+        let params = {
+          quick_user_id: data
+        }
+        _this.cookie = {}
+        _this.time = Math.random()
+        _this.getUserInfo(params)
+        prompt.showToast({
+          message: '退出成功！'
+        })
+      }
+    })
+
+  },
+  clearToken(){
+    // return new Promise((reslove, reject)=>{
+      storage.delete({
+        key: 'token',
+        success: function(data){
+          console.log('token', data)
+          // reslove(data)
+        },
+        fail: function(data){
+          // reject(data)
+        }
+      })    
+    // })  
+  },
+  clearCookie(){
+  // return new Promise((reslove, reject)=>{
+    storage.delete({
+      key: 'cookie',
+      success: function(data){
+        console.log('cookie', data)
+        // reslove(data)
+      },
+      fail: function(data){
+        // reject(data)
+      }
+    })    
+  // })  
+  },
+  // 页面跳转
+  routePath (path, params) {
+    router.push({
+      uri: path,
+      params: params
+    })    
+  },
+  // 页面跳转
+  loginRoutePath (path, params) {
+    if(this.isLogin){
+      router.push({
+        uri: path,
+        params: params
+      })
+    }else{
+      router.push({
+        uri: '/user/login',
+        params: params
+      })
+    }    
+  },
+  //修改flag实现点击导航栏显示不同的页面，pos为传入的参数
+  setIndex: function (pos) {	
+    console.log('pos', pos)
+    //设置flag，flag改变后显示的页面也会对应的改变	
+    this.flag = pos
+    if(pos == 0){
+      router.replace({
+        uri: 'BookShelf'
+      })
+    }else if(pos == 1){
+      router.replace({
+        uri: 'Home'
+      })
+    }else if(pos == 2){
+      router.replace({
+        uri: 'All'
+      })
+    }else if(pos == 3){
+      router.replace({
+        uri: 'User'
+      })
+    }
+  },
+  emitEvt2(url, e){
+    console.log(2222, url)
+    storage.get({
+      key: 'cookie',
+      success: function(data){
+        console.log('data', data)
+        if(data){
+          return true
+        }else{
+          return false
+        }
+      }
+    })
+    // setTimeout(function(){
+
+    // }, 2000)
+  },
+  
+}
+</script>
+<style lang="less" scoped>
+@font-face {
+  font-family: iconfont;
+  src: url("../Common/css/iconfont.ttf");
+}
+.icon-font{
+  font-family: iconfont;
+  font-size: 50px;
+}
+.user-page{
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: #fff;
+  /* padding-bottom: 100px; */
+  /* .web-box{
+    flex: 1;
+  } */
+  .user-bg{
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 460px;
+    background-color: #E7F2E9;
+    .user-box{
+      display: flex;
+      padding: 20px 30px 50px;
+      /* flex-direction: row; */
+      .user-cover{
+        /* width: 30%; */
+        padding-right: 30px;
+        image{
+          width: 150px;
+          height: 150px;
+          overflow: hidden;
+          border-radius: 100%;
+        }
+      }
+      .user-msg{
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        .user-name{
+          padding-top: 20px;
+          .text-login{
+            color: #333;
+            font-size: 40px;
+            font-weight: 600;
+            border-bottom: 1px solid #333;
+          }
+          .user-id{
+            color: #333;
+            padding-left: 20px;
+          }
+        }
+        .msg-tip{
+          padding-top: 5px;
+          text{
+            color: #333;
+            font-size: 30px;
+          }     
+        }
+      }
+      .mobile-user-msg{
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        padding-top: 18px;
+        .user-mobile{
+          display: flex;
+          flex-direction: row;
+          justify-content: space-between;          
+          .user-mobiles{
+            padding-top: 5px;
+            text{
+              color: #333;
+              font-size: 40px;
+              font-weight: 600;
+            } 
+          }         
+          .switch-users{
+            padding-top: 8px;
+            text{
+              color: #333;
+              font-size: 28px;
+            }
+            .icon-font{
+              color: #333;
+              font-size: 20px;
+              padding: 0 10px;
+            }
+          }
+        }
+        .user-id{
+          padding-top: 5px;
+          text{
+            color: #333;
+            font-size: 32px;
+          }
+        }
+
+      }
+
+    }
+    .my-account{
+      box-sizing: border-box;
+      display: flex;
+      justify-content: space-between;
+      margin: 0 30px;
+      padding: 30px;
+      background-color: #fff;
+      border-radius: 20px;
+      .my-account-left{
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        padding-left: 90px;
+        .my-acc-name{
+          text{
+            color: #333;
+            font-size: 32px;
+          }
+        }
+        .my-acc-num{
+          padding-top: 10px;
+          text{
+            color: #666;
+            font-size: 32px;
+          }
+          .coin{
+            color: #24AA79;
+          }
+        }
+        .account-icon{
+          position: absolute;
+          left: 10px;
+          top: 18px;
+          z-index: inherit;
+          .icon-font{
+            color: #24AA79;
+          }
+        }
+      }
+      .my-account-right{
+        display: flex;
+        align-items: center;        
+        text{
+          color: #fff;
+          width: 150px;
+          height: 60px;
+          line-height: 60px;
+          text-align: center;
+          border-radius: 50px;
+          background-color: #24AA79;
+        }        
+      }
+    }
+  }
+  .menu-list{    
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    /* width: 100%; */
+    margin: -60px 30px 30px;
+    padding: 0 20px;
+    border: 1px solid #eee;
+    border-radius: 20px;
+    background-color: #fff;
+    .menu-item{
+      box-sizing: border-box;
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      height: 100px;
+      line-height: 100px;
+      /* margin: 0 20px; */
+      border-bottom: 1px solid #eee;
+      position: relative;
+      /* a{
+        position: absolute;
+        left: 0;
+        top: 0;
+        z-index: 99;
+        width: 100%;
+        height: 100%;
+        background-color: #ffc0cb;
+      } */
+      .menu-left{
+        .icon-font{
+          color: #666;
+          margin-right: 20px;
+        }
+        text{
+          color: #333;
+        }
+
+      }
+      .menu-right{
+        .icon-font{
+          color: #999;
+          font-weight: 600;
+          font-family: 'iconfont';
+        }
+      }
+    }
+  }
+
+
+  .tab-box{
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    z-index: 888;
+    width: 100%;
+    height: 100px;
+    display: flex;
+    background-color: #fff;
+    .tab-items{      
+      flex: 1;
+      flex-direction: column;
+      .tab-text {
+        text-align: center;
+        .checked-color{
+          color: #0faeff;
+        }
+        /* &:active {
+          color: #0faeff;
+        } */
+      }
+      .tab-img {
+        /* display: block; */
+        width: 50px;
+        margin: 0 auto;
+      }
+    }
+  }
+  .create-shortcut{  
+    position: fixed;
+    bottom: 120px;
+    left: 25px;
+    width: 700px;
+    z-index: 888;
+    color: #fff;
+    border-radius: 50px;
+    background-color: #DD4343;
+  }
+  .create-desktop-icon-dialog{
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 1500;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(0, 0, 0, .6);
+    
+    .desktop-icon-box{
+      width: 600px;
+      /* height: 800px; */
+      /* height: auto; */
+      background-color: #fff;
+      border-radius: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      .close-circle{
+        position: absolute;
+        top: 0;
+        right: 0;
+        image{
+          width: 70px;
+          height: 70px;
+        }
+      }
+      .phone{
+        width: 300px;
+        /* height: auto; */
+        margin-top: 50px;
+        image{
+          width: 100%;
+          /* height: auto; */
+        }
+      }
+      .creat-desktop-tip{
+        display: flex;
+        flex-direction: column;
+        width: 500px;
+        margin: 30px 0;
+        .tip-text{
+          color: #333;
+          font-size: 28px;
+          text-align: center;
+          line-height: 40px;          
+        }  
+        .origin-color{
+          color: #F46917;
+          font-size: 28px;
+          text-align: center;
+          line-height: 40px;
+        }      
+      }
+      .close-btn{
+        width: 500px;
+        height: 100px;        
+        background-color: #FF5B5F;
+        border-radius: 50px;
+        margin-bottom: 50px;
+        .iknow{
+          width: 100%;
+          height: 100%;
+          color: #fff;
+          font-size: 34px;
+          text-align: center;
+          line-height: 100px;
+        }
+      }
+    }
+  }
+  
+}
+</style>
+
